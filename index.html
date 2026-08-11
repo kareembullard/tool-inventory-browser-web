@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tool & App Inventory Browser</title>
+<meta name="description" content="Filterable, sortable browser over a sample software tool inventory.">
+<style>
+  :root {
+    --bg: #f7f8fa; --surface: #ffffff; --border: #e2e5ea; --text: #1a1d23; --text-dim: #6b7280;
+    --accent: #2563eb; --accent-dim: #dbeafe; --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f1115; --surface: #181b21; --border: #2a2e37; --text: #e5e7eb; --text-dim: #9aa1ad; --accent: #60a5fa; --accent-dim: #1e3a5f; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+  h1 { font-size: 1.5rem; margin: 0 0 .25rem; }
+  .sub { color: var(--text-dim); font-size: .92rem; margin: 0 0 1rem; }
+  .privacy-note { font-size: .78rem; color: var(--text-dim); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .6rem .8rem; margin-bottom: 1.25rem; }
+
+  .layout { display: grid; grid-template-columns: 200px 1fr; gap: 1.25rem; align-items: start; }
+  @media (max-width: 700px) { .layout { grid-template-columns: 1fr; } }
+
+  .filter-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; }
+  .filter-panel label { display: block; font-size: .78rem; color: var(--text-dim); margin: .8rem 0 .3rem; }
+  .filter-panel label:first-child { margin-top: 0; }
+  input[type=search] { width: 100%; padding: .5rem .65rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: .88rem; }
+  select[multiple] { width: 100%; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: .85rem; padding: .3rem; }
+  select[multiple] option { padding: .25rem .4rem; border-radius: 4px; }
+  .btn { padding: .45rem .8rem; border-radius: var(--radius); border: 1px solid var(--border); background: transparent; color: var(--text-dim); font-size: .82rem; cursor: pointer; margin-top: .8rem; width: 100%; }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  th, td { text-align: left; padding: .55rem .65rem; font-size: .85rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { color: var(--text-dim); font-weight: 600; font-size: .74rem; text-transform: uppercase; letter-spacing: .02em; cursor: pointer; user-select: none; }
+  th:hover { color: var(--accent); }
+  tr:last-child td { border-bottom: none; }
+  .stacked-badge { color: var(--accent); font-weight: 700; }
+  .count { font-size: .8rem; color: var(--text-dim); margin-bottom: .6rem; }
+  .empty { text-align: center; color: var(--text-dim); padding: 2rem 0; }
+  footer { margin-top: 2.5rem; text-align: center; font-size: .78rem; color: var(--text-dim); }
+  footer a { color: var(--text-dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🧰 Tool & App Inventory Browser</h1>
+  <p class="sub">Filterable, sortable browser over a sample software tool inventory.</p>
+  <div class="privacy-note">This is a generic example dataset for demo purposes — not anyone's real personal ratings.</div>
+
+  <div class="layout">
+    <div class="filter-panel">
+      <label for="search">Search</label>
+      <input type="search" id="search" placeholder="Tool name…">
+
+      <label for="area-select">Area</label>
+      <select id="area-select" multiple size="6"></select>
+
+      <label for="function-select">Function</label>
+      <select id="function-select" multiple size="6"></select>
+
+      <label for="platform-select">Platform</label>
+      <select id="platform-select" multiple size="6"></select>
+
+      <button class="btn" id="clear-filters">Clear filters</button>
+    </div>
+
+    <div>
+      <div class="count" id="count"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th data-col="tool">Tool</th>
+              <th data-col="area">Area</th>
+              <th data-col="function">Function</th>
+              <th data-col="platforms">Platforms</th>
+              <th data-col="rating">Rating</th>
+              <th data-col="stacked">Stacked</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="empty-msg" style="display:none">No tools match.</div>
+    </div>
+  </div>
+
+  <footer>
+    Public demo — generic sample data. Source: <a href="https://github.com/kareembullard/tool-inventory-browser-web" target="_blank" rel="noopener">tool-inventory-browser-web</a>
+  </footer>
+</div>
+
+<script>
+// Generic, publicly-known software as illustrative sample data.
+// Ratings/Stacked flags are representative examples, not anyone's real opinions.
+const TOOLS = [
+  { tool: "Visual Studio Code", area: "Production", function: "Develop", platforms: ["Web", "Windows", "macOS", "Linux"], rating: 5, stacked: true },
+  { tool: "Figma", area: "Production", function: "Design", platforms: ["Web", "Windows", "macOS"], rating: 5, stacked: true },
+  { tool: "Notion", area: "Admin", function: "Record", platforms: ["Web", "Windows", "macOS", "iOS", "Android"], rating: 4, stacked: true },
+  { tool: "Slack", area: "Business", function: "Engage", platforms: ["Web", "Windows", "macOS", "iOS", "Android"], rating: 4, stacked: false },
+  { tool: "Google Calendar", area: "Admin", function: "Plan", platforms: ["Web", "iOS", "Android"], rating: 4, stacked: true },
+  { tool: "Trello", area: "Business", function: "Manage", platforms: ["Web", "iOS", "Android"], rating: 3, stacked: false },
+  { tool: "Excel", area: "Business", function: "Manage", platforms: ["Windows", "macOS", "Web"], rating: 5, stacked: true },
+  { tool: "Photoshop", area: "Production", function: "Design", platforms: ["Windows", "macOS"], rating: 4, stacked: false },
+  { tool: "Zoom", area: "Business", function: "Engage", platforms: ["Web", "Windows", "macOS", "iOS", "Android"], rating: 4, stacked: true },
+  { tool: "GitHub", area: "Production", function: "Develop", platforms: ["Web"], rating: 5, stacked: true },
+  { tool: "Canva", area: "Production", function: "Design", platforms: ["Web", "iOS", "Android"], rating: 4, stacked: false },
+  { tool: "Todoist", area: "Personal", function: "Manage", platforms: ["Web", "Windows", "macOS", "iOS", "Android"], rating: 4, stacked: false },
+  { tool: "Google Drive", area: "Admin", function: "Record", platforms: ["Web", "Windows", "macOS", "iOS", "Android"], rating: 4, stacked: true },
+  { tool: "Spotify", area: "Personal", function: "Engage", platforms: ["Web", "Windows", "macOS", "iOS", "Android"], rating: 5, stacked: false },
+  { tool: "Duolingo", area: "Education", function: "Research", platforms: ["Web", "iOS", "Android"], rating: 3, stacked: false },
+  { tool: "Obsidian", area: "Personal", function: "Record", platforms: ["Windows", "macOS", "Linux", "iOS", "Android"], rating: 4, stacked: false },
+  { tool: "Airtable", area: "Business", function: "Manage", platforms: ["Web", "iOS", "Android"], rating: 4, stacked: true },
+  { tool: "Discord", area: "Social", function: "Engage", platforms: ["Web", "Windows", "macOS", "iOS", "Android"], rating: 3, stacked: false },
+  { tool: "LinkedIn", area: "Social", function: "Network", platforms: ["Web", "iOS", "Android"], rating: 3, stacked: false },
+  { tool: "Chrome", area: "Admin", function: "Research", platforms: ["Web", "Windows", "macOS", "Linux", "iOS", "Android"], rating: 5, stacked: true },
+];
+
+// --- Filters ---
+const searchInput = document.getElementById("search");
+const areaSelect = document.getElementById("area-select");
+const functionSelect = document.getElementById("function-select");
+const platformSelect = document.getElementById("platform-select");
+const tbody = document.getElementById("table-body");
+const emptyMsg = document.getElementById("empty-msg");
+const countEl = document.getElementById("count");
+
+function distinct(field, isArray) {
+  const set = new Set();
+  TOOLS.forEach(t => {
+    if (isArray) t[field].forEach(v => set.add(v));
+    else set.add(t[field]);
+  });
+  return [...set].sort();
+}
+
+function populateMultiSelect(select, values) {
+  values.forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = v;
+    select.appendChild(opt);
+  });
+}
+
+populateMultiSelect(areaSelect, distinct("area", false));
+populateMultiSelect(functionSelect, distinct("function", false));
+populateMultiSelect(platformSelect, distinct("platforms", true));
+
+function selectedValues(select) {
+  return [...select.selectedOptions].map(o => o.value);
+}
+
+let sortCol = null;
+let sortDir = 1;
+
+function matches(tool, q, areas, functions, platforms) {
+  if (areas.length && !areas.includes(tool.area)) return false;
+  if (functions.length && !functions.includes(tool.function)) return false;
+  if (platforms.length && !platforms.some(p => tool.platforms.includes(p))) return false;
+  if (q && !tool.tool.toLowerCase().includes(q)) return false;
+  return true;
+}
+
+function sortValue(tool, col) {
+  if (col === "platforms") return tool.platforms.join(", ");
+  return tool[col];
+}
+
+function refresh() {
+  const q = searchInput.value.trim().toLowerCase();
+  const areas = selectedValues(areaSelect);
+  const functions = selectedValues(functionSelect);
+  const platforms = selectedValues(platformSelect);
+
+  let filtered = TOOLS.filter(t => matches(t, q, areas, functions, platforms));
+
+  if (sortCol) {
+    filtered = [...filtered].sort((a, b) => {
+      const va = sortValue(a, sortCol), vb = sortValue(b, sortCol);
+      if (typeof va === "number" && typeof vb === "number") return (va - vb) * sortDir;
+      return String(va).localeCompare(String(vb)) * sortDir;
+    });
+  }
+
+  tbody.innerHTML = "";
+  emptyMsg.style.display = filtered.length ? "none" : "block";
+  countEl.textContent = `${filtered.length} of ${TOOLS.length} tools`;
+
+  filtered.forEach(t => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td></td><td></td><td></td><td></td><td></td><td></td>`;
+    tr.children[0].textContent = t.tool;
+    tr.children[1].textContent = t.area;
+    tr.children[2].textContent = t.function;
+    tr.children[3].textContent = t.platforms.join(", ");
+    tr.children[4].textContent = "★".repeat(t.rating);
+    tr.children[5].innerHTML = t.stacked ? '<span class="stacked-badge">Yes</span>' : "";
+    tbody.appendChild(tr);
+  });
+}
+
+document.querySelectorAll("th[data-col]").forEach(th => {
+  th.addEventListener("click", () => {
+    const col = th.dataset.col;
+    if (sortCol === col) sortDir *= -1;
+    else { sortCol = col; sortDir = 1; }
+    refresh();
+  });
+});
+
+searchInput.addEventListener("input", refresh);
+areaSelect.addEventListener("change", refresh);
+functionSelect.addEventListener("change", refresh);
+platformSelect.addEventListener("change", refresh);
+
+document.getElementById("clear-filters").addEventListener("click", () => {
+  searchInput.value = "";
+  [areaSelect, functionSelect, platformSelect].forEach(sel => {
+    [...sel.options].forEach(o => (o.selected = false));
+  });
+  refresh();
+});
+
+refresh();
+</script>
+</body>
+</html>
