@@ -12,6 +12,7 @@ A static, single-file web app version of [tool-inventory-browser](https://github
 - Card grid instead of a table — filter with toggleable pill buttons (Area, Function, Platform, Main Use), search, and a sort dropdown (Name, Rating, Most Linked Systems, Area). Click a card for a full detail page (`#/tool/<id>`) with features, benefits, integrations, file types, and rating
 - **Skill-level badges** on tools I've rated in my Business Skills profile (Airtable = Expert, Google Keep = Expert, TickTick/Notion = Advanced, Microsoft Power BI = Certified PL-300, etc.)
 - **Cross-links to [systems-catalog-explorer-web](https://kareembullard.github.io/systems-catalog-explorer-web/)** — every tool's "Linked Systems" section opens the matching system on that app
+- **Editable, throughout**: every tool has an "Edit" button — rename it, change its classification (Area/Function/Main Use/Device/Update Frequency/Skill/Rating), manage its Platforms/Integrations/File Types as add-or-remove chip lists, edit its Features/Benefits/Task text, and add/remove Linked Systems. Edits save to *your* browser's `localStorage` (a separate key from systems-catalog-explorer-web's own edits — the two apps cross-link but don't share storage) as an overlay on top of the baked-in data. Export/Import/Reset All buttons at the top of the page cover the whole overlay
 - Makes no network calls
 
 ## Where the data comes from

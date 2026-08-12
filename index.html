@@ -72,13 +72,35 @@
 
   footer { margin-top: 2.5rem; text-align: center; font-size: .78rem; color: var(--text-dim); }
   footer a { color: var(--text-dim); }
+
+  .edit-toolbar { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; font-size: .8rem; color: var(--text-dim); margin-bottom: 1rem; }
+  .btn.primary { background: var(--accent); color: #fff; border-color: transparent; font-weight: 600; }
+  .btn.primary:hover { color: #fff; filter: brightness(1.08); }
+  .btn.danger:hover { border-color: #dc2626; color: #dc2626; }
+  .tag.edited { background: var(--accent-dim); color: var(--accent); border-color: transparent; }
+
+  .edit-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; margin-top: 1rem; }
+  .edit-field { margin-bottom: 1.1rem; }
+  .edit-field label { display: block; font-size: .78rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: .02em; margin-bottom: .4rem; }
+  .edit-field input[type=text], .edit-field textarea { width: 100%; padding: .5rem .7rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: .9rem; font-family: inherit; }
+  .edit-field textarea { min-height: 70px; resize: vertical; }
+  .edit-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .8rem; }
+  .chip-list { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .5rem; }
+  .chip { display: inline-flex; align-items: center; gap: .35rem; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: .2rem .5rem .2rem .75rem; font-size: .82rem; }
+  .chip button { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: .85rem; line-height: 1; padding: 0 .15rem; }
+  .chip button:hover { color: #dc2626; }
+  .add-row { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .add-row input[type=text] { flex: 1; min-width: 140px; padding: .4rem .6rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: .85rem; }
+  .edit-actions { display: flex; gap: .6rem; margin-top: 1rem; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>🧰 Tool & App Inventory Browser</h1>
   <p class="sub">Browse my real software tool inventory — filter, sort, and see how each tool links to my personal systems.</p>
-  <div class="privacy-note">This is my real tool inventory (91 tools), exported from my own Airtable workspace. Skill-level badges come from my Business Skills profile note. Systems links point to <code>systems-catalog-explorer-web</code>, another live app of mine.</div>
+  <div class="privacy-note">This is my real tool inventory (91 tools), exported from my own Airtable workspace. Skill-level badges come from my Business Skills profile note. Systems links point to <code>systems-catalog-explorer-web</code>, another live app of mine. Every tool has an "Edit" button — edits save to <em>your</em> browser only (<code>localStorage</code>), separate from that other app's edits; use Export below to hand changes back for syncing into Airtable.</div>
+
+  <div class="edit-toolbar" id="edit-toolbar"></div>
 
   <div id="app"></div>
 
@@ -2876,9 +2898,55 @@ const TOOLS = [
 
 const SYSTEMS_CATALOG_URL = "https://kareembullard.github.io/systems-catalog-explorer-web/";
 
+// --- Local edits overlay ---
+// Static site, no backend: edits live in this browser's localStorage as a
+// per-tool overlay on top of the baked-in TOOLS data. Separate storage key
+// from systems-catalog-explorer-web's own edits — the two apps don't share
+// localStorage even though they cross-link to each other. Export any time
+// to hand changes back for syncing into the real Airtable source.
+const EDITS_KEY = "tool-inventory-browser-web:edits";
+const EDITABLE_TEXT_FIELDS = ["mainUse", "area", "func", "device", "freq", "skill", "features", "benefits", "task"];
+const EDITABLE_LIST_FIELDS = ["platforms", "integrations", "fileExt"];
+
+function loadEdits() {
+  try { return JSON.parse(localStorage.getItem(EDITS_KEY) || "{}"); } catch { return {}; }
+}
+function saveEdits(edits) { localStorage.setItem(EDITS_KEY, JSON.stringify(edits)); }
+function isEdited(id) { return !!loadEdits()[id]; }
+function setToolEdit(id, patch) {
+  const edits = loadEdits();
+  edits[id] = { ...(edits[id] || {}), ...patch };
+  saveEdits(edits);
+}
+function clearToolEdit(id) {
+  const edits = loadEdits();
+  delete edits[id];
+  saveEdits(edits);
+}
+function clearAllEdits() { saveEdits({}); }
+
+function effectiveTools() {
+  const edits = loadEdits();
+  return TOOLS.map(t => {
+    const e = edits[t.id];
+    if (!e) return t;
+    const merged = { ...t };
+    if (e.name !== undefined) merged.name = e.name;
+    if (e.rating !== undefined) merged.rating = e.rating;
+    if (e.systems !== undefined) merged.systems = e.systems;
+    EDITABLE_TEXT_FIELDS.forEach(f => { if (e[f] !== undefined) merged[f] = e[f]; });
+    EDITABLE_LIST_FIELDS.forEach(f => { if (e[f] !== undefined) merged[f] = e[f]; });
+    return merged;
+  });
+}
+
+function slugify(name) {
+  return name.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
 function distinct(field, isArray) {
   const set = new Set();
-  TOOLS.forEach(t => {
+  effectiveTools().forEach(t => {
     const v = t[field];
     if (isArray) (v || []).forEach(x => set.add(x));
     else if (v) set.add(v);
@@ -2906,8 +2974,15 @@ function parseRoute() {
 
 function render() {
   const parts = parseRoute();
-  if (parts[0] === "tool" && parts[1]) return renderToolDetail(decodeURIComponent(parts[1]));
+  if (parts[0] === "tool" && parts[1]) return renderToolDetail(decodeURIComponent(parts[1]), parts[2] === "edit");
   renderList();
+}
+
+// Leaving edit mode always means changing the hash (edit mode is its own
+// route, .../edit) so it stays a real, back-button-able navigation step.
+function goToNonEdit(targetHash) {
+  if (targetHash === location.hash) render();
+  else location.hash = targetHash;
 }
 
 const SORTS = {
@@ -3013,12 +3088,13 @@ function renderList() {
     filterState.query = searchInput.value;
     filterState.sort = sortSelect.value;
 
-    let filtered = TOOLS.filter(t => matches(t, q));
+    const allTools = effectiveTools();
+    let filtered = allTools.filter(t => matches(t, q));
     filtered = [...filtered].sort(SORTS[filterState.sort].cmp);
 
     grid.innerHTML = "";
     emptyMsg.style.display = filtered.length ? "none" : "block";
-    countEl.textContent = `${filtered.length} of ${TOOLS.length} tools`;
+    countEl.textContent = `${filtered.length} of ${allTools.length} tools`;
 
     filtered.forEach(t => {
       const card = document.createElement("div");
@@ -3029,6 +3105,7 @@ function renderList() {
       title.className = "tc-title";
       title.textContent = t.name;
       if (t.skill) title.insertAdjacentHTML("beforeend", " " + tagHtml(t.skill, "skill"));
+      if (isEdited(t.id)) title.insertAdjacentHTML("beforeend", " " + tagHtml("edited", "edited"));
       card.appendChild(title);
 
       const tags = document.createElement("div");
@@ -3075,8 +3152,8 @@ function renderList() {
   draw();
 }
 
-function renderToolDetail(id) {
-  const tool = TOOLS.find(t => t.id === id);
+function renderToolDetail(id, editing) {
+  const tool = effectiveTools().find(t => t.id === id);
   app.innerHTML = "";
   if (!tool) {
     app.innerHTML = `<p class="empty">Tool not found.</p>`;
@@ -3091,10 +3168,29 @@ function renderToolDetail(id) {
   crumbs.appendChild(back);
   app.appendChild(crumbs);
 
+  const titleRow = document.createElement("div");
+  titleRow.style.display = "flex";
+  titleRow.style.justifyContent = "space-between";
+  titleRow.style.alignItems = "center";
+  titleRow.style.flexWrap = "wrap";
+  titleRow.style.gap = ".6rem";
   const h2 = document.createElement("h2");
+  h2.style.margin = "0";
   h2.textContent = tool.name;
   if (tool.skill) h2.insertAdjacentHTML("beforeend", " " + tagHtml(tool.skill, "skill"));
-  app.appendChild(h2);
+  if (isEdited(tool.id)) h2.insertAdjacentHTML("beforeend", " " + tagHtml("edited", "edited"));
+  titleRow.appendChild(h2);
+
+  if (!editing) {
+    const editBtn = document.createElement("button");
+    editBtn.className = "btn";
+    editBtn.textContent = "✏️ Edit";
+    editBtn.addEventListener("click", () => { location.hash = `#/tool/${encodeURIComponent(id)}/edit`; });
+    titleRow.appendChild(editBtn);
+  }
+  app.appendChild(titleRow);
+
+  if (editing) return renderToolEditForm(tool);
 
   const grid = document.createElement("div");
   grid.className = "detail-grid";
@@ -3152,7 +3248,263 @@ function renderToolDetail(id) {
   app.appendChild(section);
 }
 
+function renderToolEditForm(tool) {
+  const draft = {
+    name: tool.name,
+    mainUse: tool.mainUse, area: tool.area, func: tool.func, device: tool.device, freq: tool.freq, skill: tool.skill,
+    rating: tool.rating,
+    features: tool.features, benefits: tool.benefits, task: tool.task,
+    platforms: tool.platforms.slice(),
+    integrations: tool.integrations.slice(),
+    fileExt: tool.fileExt.slice(),
+    systems: tool.systems.map(s => ({ ...s })),
+  };
+
+  const panel = document.createElement("div");
+  panel.className = "edit-panel";
+  app.appendChild(panel);
+
+  function textField(label, key, isTextarea) {
+    const field = document.createElement("div");
+    field.className = "edit-field";
+    field.innerHTML = `<label>${label}</label>`;
+    const input = document.createElement(isTextarea ? "textarea" : "input");
+    if (!isTextarea) input.type = "text";
+    input.value = draft[key] ?? "";
+    input.addEventListener("input", () => { draft[key] = input.value; });
+    field.appendChild(input);
+    return field;
+  }
+
+  const nameRow = document.createElement("div");
+  nameRow.className = "edit-row";
+  nameRow.appendChild(textField("Name", "name"));
+  const ratingField = document.createElement("div");
+  ratingField.className = "edit-field";
+  ratingField.innerHTML = `<label>Rating (0–5)</label>`;
+  const ratingInput = document.createElement("input");
+  ratingInput.type = "text";
+  ratingInput.value = draft.rating ?? "";
+  ratingInput.placeholder = "e.g. 4";
+  ratingInput.addEventListener("input", () => {
+    const n = parseInt(ratingInput.value, 10);
+    draft.rating = Number.isFinite(n) ? Math.max(0, Math.min(5, n)) : null;
+  });
+  ratingField.appendChild(ratingInput);
+  nameRow.appendChild(ratingField);
+  panel.appendChild(nameRow);
+
+  const classRow = document.createElement("div");
+  classRow.className = "edit-row";
+  classRow.appendChild(textField("Main Use", "mainUse"));
+  classRow.appendChild(textField("Area", "area"));
+  classRow.appendChild(textField("Function", "func"));
+  panel.appendChild(classRow);
+
+  const classRow2 = document.createElement("div");
+  classRow2.className = "edit-row";
+  classRow2.appendChild(textField("Device", "device"));
+  classRow2.appendChild(textField("Update Frequency", "freq"));
+  classRow2.appendChild(textField("Skill Level", "skill"));
+  panel.appendChild(classRow2);
+
+  function chipListField(label, key, placeholder) {
+    const field = document.createElement("div");
+    field.className = "edit-field";
+    field.innerHTML = `<label>${label}</label>`;
+    const chips = document.createElement("div");
+    chips.className = "chip-list";
+    field.appendChild(chips);
+    function drawChips() {
+      chips.innerHTML = "";
+      draft[key].forEach((val, idx) => {
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        chip.innerHTML = `<span></span><button title="Remove">✕</button>`;
+        chip.querySelector("span").textContent = val;
+        chip.querySelector("button").addEventListener("click", () => { draft[key].splice(idx, 1); drawChips(); });
+        chips.appendChild(chip);
+      });
+    }
+    drawChips();
+    const addRow = document.createElement("div");
+    addRow.className = "add-row";
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = placeholder;
+    const addBtn = document.createElement("button");
+    addBtn.className = "btn";
+    addBtn.type = "button";
+    addBtn.textContent = "Add";
+    function add() {
+      const v = input.value.trim();
+      if (v && !draft[key].includes(v)) draft[key].push(v);
+      input.value = "";
+      drawChips();
+    }
+    addBtn.addEventListener("click", add);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); add(); } });
+    addRow.appendChild(input);
+    addRow.appendChild(addBtn);
+    field.appendChild(addRow);
+    return field;
+  }
+  panel.appendChild(chipListField("Platforms", "platforms", "Add platform…"));
+  panel.appendChild(chipListField("Integrations", "integrations", "Add integration…"));
+  panel.appendChild(chipListField("File Types", "fileExt", "Add file type (e.g. .pdf)…"));
+
+  // Systems: same {name,id} shape as the baked-in data, id auto-slugified so
+  // the cross-link to systems-catalog-explorer-web resolves if that system
+  // exists there. This is a separate localStorage overlay from that app's
+  // own edits — the two don't sync automatically.
+  const sysField = document.createElement("div");
+  sysField.className = "edit-field";
+  sysField.innerHTML = `<label>Linked Systems</label>`;
+  const sysChips = document.createElement("div");
+  sysChips.className = "chip-list";
+  sysField.appendChild(sysChips);
+  function drawSysChips() {
+    sysChips.innerHTML = "";
+    draft.systems.forEach((s, idx) => {
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chip.innerHTML = `<span></span><button title="Remove">✕</button>`;
+      chip.querySelector("span").textContent = s.name;
+      chip.querySelector("button").addEventListener("click", () => { draft.systems.splice(idx, 1); drawSysChips(); });
+      sysChips.appendChild(chip);
+    });
+  }
+  drawSysChips();
+  const sysAddRow = document.createElement("div");
+  sysAddRow.className = "add-row";
+  const sysInput = document.createElement("input");
+  sysInput.type = "text";
+  sysInput.placeholder = "Add system name…";
+  const sysAddBtn = document.createElement("button");
+  sysAddBtn.className = "btn";
+  sysAddBtn.type = "button";
+  sysAddBtn.textContent = "Add";
+  function addSystem() {
+    const v = sysInput.value.trim();
+    if (v && !draft.systems.some(s => s.name === v)) draft.systems.push({ name: v, id: slugify(v) });
+    sysInput.value = "";
+    drawSysChips();
+  }
+  sysAddBtn.addEventListener("click", addSystem);
+  sysInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addSystem(); } });
+  sysAddRow.appendChild(sysInput);
+  sysAddRow.appendChild(sysAddBtn);
+  sysField.appendChild(sysAddRow);
+  panel.appendChild(sysField);
+
+  panel.appendChild(textField("Features", "features", true));
+  panel.appendChild(textField("Benefits", "benefits", true));
+  panel.appendChild(textField("Task", "task", true));
+
+  const actions = document.createElement("div");
+  actions.className = "edit-actions";
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "btn primary";
+  saveBtn.textContent = "Save";
+  saveBtn.addEventListener("click", () => {
+    const newName = draft.name.trim();
+    if (!newName) { alert("Name can't be empty."); return; }
+    setToolEdit(tool.id, { ...draft, name: newName });
+    renderEditToolbar();
+    goToNonEdit(`#/tool/${encodeURIComponent(tool.id)}`);
+  });
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "btn";
+  cancelBtn.textContent = "Cancel";
+  cancelBtn.addEventListener("click", () => goToNonEdit(`#/tool/${encodeURIComponent(tool.id)}`));
+  actions.appendChild(saveBtn);
+  actions.appendChild(cancelBtn);
+  if (isEdited(tool.id)) {
+    const resetBtn = document.createElement("button");
+    resetBtn.className = "btn danger";
+    resetBtn.textContent = "Reset to Original";
+    resetBtn.addEventListener("click", () => {
+      if (confirm("Discard your local edits for this tool and revert to the original data?")) {
+        clearToolEdit(tool.id);
+        renderEditToolbar();
+        goToNonEdit(`#/tool/${encodeURIComponent(tool.id)}`);
+      }
+    });
+    actions.appendChild(resetBtn);
+  }
+  panel.appendChild(actions);
+}
+
+// --- Global edit toolbar: export/import/reset the local edits overlay ---
+function renderEditToolbar() {
+  const toolbar = document.getElementById("edit-toolbar");
+  const count = Object.keys(loadEdits()).length;
+  toolbar.innerHTML = "";
+
+  const countSpan = document.createElement("span");
+  countSpan.textContent = count ? `${count} tool${count === 1 ? "" : "s"} edited locally` : "No local edits yet";
+  toolbar.appendChild(countSpan);
+
+  const exportBtn = document.createElement("button");
+  exportBtn.className = "btn";
+  exportBtn.textContent = "Export Edits";
+  exportBtn.addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(loadEdits(), null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "tool-inventory-edits.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+  toolbar.appendChild(exportBtn);
+
+  const importBtn = document.createElement("button");
+  importBtn.className = "btn";
+  importBtn.textContent = "Import Edits";
+  const importInput = document.createElement("input");
+  importInput.type = "file";
+  importInput.accept = "application/json";
+  importInput.style.display = "none";
+  importBtn.addEventListener("click", () => importInput.click());
+  importInput.addEventListener("change", () => {
+    const file = importInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (typeof data !== "object" || Array.isArray(data)) throw new Error("bad shape");
+        saveEdits(data);
+        renderEditToolbar();
+        render();
+      } catch {
+        alert("Could not import that file — expected the JSON produced by Export Edits.");
+      }
+      importInput.value = "";
+    };
+    reader.readAsText(file);
+  });
+  toolbar.appendChild(importBtn);
+  toolbar.appendChild(importInput);
+
+  if (count) {
+    const resetAllBtn = document.createElement("button");
+    resetAllBtn.className = "btn danger";
+    resetAllBtn.textContent = "Reset All Edits";
+    resetAllBtn.addEventListener("click", () => {
+      if (confirm(`Discard all ${count} local edit(s) and revert every tool to the original data?`)) {
+        clearAllEdits();
+        renderEditToolbar();
+        render();
+      }
+    });
+    toolbar.appendChild(resetAllBtn);
+  }
+}
+
 window.addEventListener("hashchange", render);
+renderEditToolbar();
 render();
 </script>
 </body>
