@@ -26,28 +26,31 @@
   nav.crumbs a { color: var(--accent); text-decoration: none; cursor: pointer; }
   nav.crumbs a:hover { text-decoration: underline; }
 
-  .layout { display: grid; grid-template-columns: 210px 1fr; gap: 1.25rem; align-items: start; }
-  @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } }
+  input[type=search] { width: 100%; padding: .6rem .8rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); font-size: .92rem; margin-bottom: .9rem; }
 
-  .filter-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; position: sticky; top: 1rem; }
-  .filter-panel label { display: block; font-size: .78rem; color: var(--text-dim); margin: .8rem 0 .3rem; }
-  .filter-panel label:first-child { margin-top: 0; }
-  input[type=search] { width: 100%; padding: .5rem .65rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: .88rem; }
-  select[multiple] { width: 100%; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: .83rem; padding: .3rem; }
-  select[multiple] option { padding: .25rem .4rem; border-radius: 4px; }
-  .btn { padding: .45rem .8rem; border-radius: var(--radius); border: 1px solid var(--border); background: transparent; color: var(--text-dim); font-size: .82rem; cursor: pointer; margin-top: .8rem; width: 100%; }
+  .filter-bar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .9rem 1rem; margin-bottom: 1rem; }
+  .filter-group { margin-bottom: .7rem; }
+  .filter-group:last-child { margin-bottom: 0; }
+  .filter-group .fg-label { display: block; font-size: .72rem; text-transform: uppercase; letter-spacing: .02em; color: var(--text-dim); margin-bottom: .4rem; }
+  .pills { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .pill { padding: .3rem .75rem; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); color: var(--text-dim); font-size: .8rem; cursor: pointer; }
+  .pill:hover { border-color: var(--accent); color: var(--accent); }
+  .pill.active { background: var(--accent-dim); color: var(--accent); border-color: transparent; font-weight: 600; }
+
+  .toolbar-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .6rem; margin-bottom: .9rem; }
+  .btn { padding: .45rem .8rem; border-radius: var(--radius); border: 1px solid var(--border); background: transparent; color: var(--text-dim); font-size: .82rem; cursor: pointer; }
   .btn:hover { border-color: var(--accent); color: var(--accent); }
+  select#sort-select { padding: .4rem .6rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); font-size: .82rem; }
 
-  .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  th, td { text-align: left; padding: .55rem .65rem; font-size: .85rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  th { color: var(--text-dim); font-weight: 600; font-size: .74rem; text-transform: uppercase; letter-spacing: .02em; cursor: pointer; user-select: none; }
-  th:hover { color: var(--accent); }
-  tr:last-child td { border-bottom: none; }
-  td a.tool-link { color: var(--accent); text-decoration: none; font-weight: 600; cursor: pointer; }
-  td a.tool-link:hover { text-decoration: underline; }
-  .stars { color: var(--star); letter-spacing: 1px; }
-  .count { font-size: .8rem; color: var(--text-dim); margin-bottom: .6rem; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: .9rem; }
+  .tool-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; cursor: pointer; display: flex; flex-direction: column; gap: .5rem; }
+  .tool-card:hover { border-color: var(--accent); }
+  .tool-card .tc-title { font-weight: 700; font-size: .98rem; }
+  .tool-card .tc-tags { display: flex; flex-wrap: wrap; gap: .3rem; }
+  .tool-card .tc-meta { font-size: .78rem; color: var(--text-dim); }
+  .tool-card .tc-footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: .3rem; }
+  .stars { color: var(--star); letter-spacing: 1px; font-size: .85rem; }
+  .count { font-size: .8rem; color: var(--text-dim); }
   .empty { text-align: center; color: var(--text-dim); padding: 2rem 0; }
 
   .tag { display: inline-block; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: .1rem .55rem; font-size: .74rem; color: var(--text-dim); margin: 0 .3rem .3rem 0; }
@@ -2907,157 +2910,166 @@ function render() {
   renderList();
 }
 
-let sortCol = null;
-let sortDir = 1;
+const SORTS = {
+  "name-asc": { label: "Name (A–Z)", cmp: (a, b) => a.name.localeCompare(b.name) },
+  "rating-desc": { label: "Rating (High–Low)", cmp: (a, b) => (b.rating || 0) - (a.rating || 0) || a.name.localeCompare(b.name) },
+  "systems-desc": { label: "Most Linked Systems", cmp: (a, b) => b.systems.length - a.systems.length || a.name.localeCompare(b.name) },
+  "area-asc": { label: "Area (A–Z)", cmp: (a, b) => (a.area || "").localeCompare(b.area || "") || a.name.localeCompare(b.name) },
+};
+
+// Filter state persists across re-renders within a session (e.g. detail -> back)
+const filterState = { areas: new Set(), funcs: new Set(), platforms: new Set(), mainUses: new Set(), sort: "name-asc" };
 
 function renderList() {
   app.innerHTML = "";
 
-  const layout = document.createElement("div");
-  layout.className = "layout";
+  const searchWrap = document.createElement("div");
+  const searchInput = document.createElement("input");
+  searchInput.type = "search";
+  searchInput.id = "search";
+  searchInput.placeholder = "Search tools…";
+  searchInput.value = filterState.query || "";
+  searchWrap.appendChild(searchInput);
+  app.appendChild(searchWrap);
 
-  const panel = document.createElement("div");
-  panel.className = "filter-panel";
-  panel.innerHTML = `
-    <label for="search">Search</label>
-    <input type="search" id="search" placeholder="Tool name…">
-    <label for="area-select">Area</label>
-    <select id="area-select" multiple size="6"></select>
-    <label for="function-select">Function</label>
-    <select id="function-select" multiple size="6"></select>
-    <label for="platform-select">Platform</label>
-    <select id="platform-select" multiple size="6"></select>
-    <label for="mainuse-select">Main Use</label>
-    <select id="mainuse-select" multiple size="3"></select>
-    <button class="btn" id="clear-filters">Clear filters</button>
-  `;
+  const filterBar = document.createElement("div");
+  filterBar.className = "filter-bar";
+  app.appendChild(filterBar);
 
-  const right = document.createElement("div");
-  right.innerHTML = `
-    <div class="count" id="count"></div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th data-col="name">Tool</th>
-            <th data-col="area">Area</th>
-            <th data-col="func">Function</th>
-            <th data-col="platforms">Platforms</th>
-            <th data-col="rating">Rating</th>
-            <th data-col="systems">Systems</th>
-          </tr>
-        </thead>
-        <tbody id="table-body"></tbody>
-      </table>
-    </div>
-    <div class="empty" id="empty-msg" style="display:none">No tools match.</div>
-  `;
-
-  layout.appendChild(panel);
-  layout.appendChild(right);
-  app.appendChild(layout);
-
-  const searchInput = panel.querySelector("#search");
-  const areaSelect = panel.querySelector("#area-select");
-  const functionSelect = panel.querySelector("#function-select");
-  const platformSelect = panel.querySelector("#platform-select");
-  const mainUseSelect = panel.querySelector("#mainuse-select");
-  const tbody = right.querySelector("#table-body");
-  const emptyMsg = right.querySelector("#empty-msg");
-  const countEl = right.querySelector("#count");
-
-  function populateMultiSelect(select, values) {
+  function pillGroup(label, values, stateSet) {
+    const group = document.createElement("div");
+    group.className = "filter-group";
+    group.innerHTML = `<span class="fg-label">${label}</span>`;
+    const pills = document.createElement("div");
+    pills.className = "pills";
     values.forEach(v => {
-      const opt = document.createElement("option");
-      opt.value = v;
-      opt.textContent = v;
-      select.appendChild(opt);
+      const pill = document.createElement("button");
+      pill.type = "button";
+      pill.className = "pill" + (stateSet.has(v) ? " active" : "");
+      pill.textContent = v;
+      pill.addEventListener("click", () => {
+        if (stateSet.has(v)) stateSet.delete(v); else stateSet.add(v);
+        pill.classList.toggle("active");
+        draw();
+      });
+      pills.appendChild(pill);
     });
+    group.appendChild(pills);
+    return group;
   }
-  populateMultiSelect(areaSelect, distinct("area", false));
-  populateMultiSelect(functionSelect, distinct("func", false));
-  populateMultiSelect(platformSelect, distinct("platforms", true));
-  populateMultiSelect(mainUseSelect, distinct("mainUse", false));
+  filterBar.appendChild(pillGroup("Area", distinct("area", false), filterState.areas));
+  filterBar.appendChild(pillGroup("Function", distinct("func", false), filterState.funcs));
+  filterBar.appendChild(pillGroup("Platform", distinct("platforms", true), filterState.platforms));
+  filterBar.appendChild(pillGroup("Main Use", distinct("mainUse", false), filterState.mainUses));
 
-  function selectedValues(select) { return [...select.selectedOptions].map(o => o.value); }
+  const toolbarRow = document.createElement("div");
+  toolbarRow.className = "toolbar-row";
+  const countEl = document.createElement("span");
+  countEl.className = "count";
+  toolbarRow.appendChild(countEl);
 
-  function matches(t, q, areas, functions, platforms, mainUses) {
-    if (areas.length && !areas.includes(t.area)) return false;
-    if (functions.length && !functions.includes(t.func)) return false;
-    if (platforms.length && !platforms.some(p => t.platforms.includes(p))) return false;
-    if (mainUses.length && !mainUses.includes(t.mainUse)) return false;
+  const rightControls = document.createElement("div");
+  rightControls.style.display = "flex";
+  rightControls.style.gap = ".6rem";
+  rightControls.style.alignItems = "center";
+  const sortSelect = document.createElement("select");
+  sortSelect.id = "sort-select";
+  Object.entries(SORTS).forEach(([key, s]) => {
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = s.label;
+    sortSelect.appendChild(opt);
+  });
+  sortSelect.value = filterState.sort;
+  const clearBtn = document.createElement("button");
+  clearBtn.className = "btn";
+  clearBtn.textContent = "Clear filters";
+  rightControls.appendChild(sortSelect);
+  rightControls.appendChild(clearBtn);
+  toolbarRow.appendChild(rightControls);
+  app.appendChild(toolbarRow);
+
+  const grid = document.createElement("div");
+  grid.className = "card-grid";
+  app.appendChild(grid);
+
+  const emptyMsg = document.createElement("div");
+  emptyMsg.className = "empty";
+  emptyMsg.textContent = "No tools match.";
+  emptyMsg.style.display = "none";
+  app.appendChild(emptyMsg);
+
+  function matches(t, q) {
+    if (filterState.areas.size && !filterState.areas.has(t.area)) return false;
+    if (filterState.funcs.size && !filterState.funcs.has(t.func)) return false;
+    if (filterState.platforms.size && ![...filterState.platforms].some(p => t.platforms.includes(p))) return false;
+    if (filterState.mainUses.size && !filterState.mainUses.has(t.mainUse)) return false;
     if (q && !t.name.toLowerCase().includes(q)) return false;
     return true;
   }
 
-  function sortValue(t, col) {
-    if (col === "platforms") return t.platforms.join(", ");
-    if (col === "systems") return t.systems.length;
-    return t[col] || "";
-  }
-
   function draw() {
     const q = searchInput.value.trim().toLowerCase();
-    const areas = selectedValues(areaSelect);
-    const functions = selectedValues(functionSelect);
-    const platforms = selectedValues(platformSelect);
-    const mainUses = selectedValues(mainUseSelect);
+    filterState.query = searchInput.value;
+    filterState.sort = sortSelect.value;
 
-    let filtered = TOOLS.filter(t => matches(t, q, areas, functions, platforms, mainUses));
+    let filtered = TOOLS.filter(t => matches(t, q));
+    filtered = [...filtered].sort(SORTS[filterState.sort].cmp);
 
-    if (sortCol) {
-      filtered = [...filtered].sort((a, b) => {
-        const va = sortValue(a, sortCol), vb = sortValue(b, sortCol);
-        if (typeof va === "number" && typeof vb === "number") return (va - vb) * sortDir;
-        return String(va).localeCompare(String(vb)) * sortDir;
-      });
-    }
-
-    tbody.innerHTML = "";
+    grid.innerHTML = "";
     emptyMsg.style.display = filtered.length ? "none" : "block";
     countEl.textContent = `${filtered.length} of ${TOOLS.length} tools`;
 
     filtered.forEach(t => {
-      const tr = document.createElement("tr");
-      const nameTd = document.createElement("td");
-      const a = document.createElement("a");
-      a.className = "tool-link";
-      a.textContent = t.name;
-      a.addEventListener("click", () => { location.hash = `#/tool/${encodeURIComponent(t.id)}`; });
-      nameTd.appendChild(a);
-      if (t.skill) nameTd.insertAdjacentHTML("beforeend", " " + tagHtml(t.skill, "skill"));
-      tr.appendChild(nameTd);
+      const card = document.createElement("div");
+      card.className = "tool-card";
+      card.addEventListener("click", () => { location.hash = `#/tool/${encodeURIComponent(t.id)}`; });
 
-      const areaTd = document.createElement("td"); areaTd.textContent = t.area || "—"; tr.appendChild(areaTd);
-      const funcTd = document.createElement("td"); funcTd.textContent = t.func || "—"; tr.appendChild(funcTd);
-      const platTd = document.createElement("td"); platTd.textContent = t.platforms.join(", ") || "—"; tr.appendChild(platTd);
-      const ratingTd = document.createElement("td"); ratingTd.innerHTML = starHtml(t.rating) || "—"; tr.appendChild(ratingTd);
-      const sysTd = document.createElement("td"); sysTd.textContent = t.systems.length ? `${t.systems.length}` : "—"; tr.appendChild(sysTd);
+      const title = document.createElement("div");
+      title.className = "tc-title";
+      title.textContent = t.name;
+      if (t.skill) title.insertAdjacentHTML("beforeend", " " + tagHtml(t.skill, "skill"));
+      card.appendChild(title);
 
-      tbody.appendChild(tr);
+      const tags = document.createElement("div");
+      tags.className = "tc-tags";
+      if (t.area) tags.insertAdjacentHTML("beforeend", tagHtml(t.area));
+      if (t.func) tags.insertAdjacentHTML("beforeend", tagHtml(t.func));
+      card.appendChild(tags);
+
+      if (t.platforms.length) {
+        const plat = document.createElement("div");
+        plat.className = "tc-meta";
+        plat.textContent = t.platforms.join(", ");
+        card.appendChild(plat);
+      }
+
+      const footer = document.createElement("div");
+      footer.className = "tc-footer";
+      const stars = document.createElement("span");
+      stars.className = "stars";
+      stars.innerHTML = starHtml(t.rating) || "";
+      const sysCount = document.createElement("span");
+      sysCount.className = "count";
+      sysCount.textContent = t.systems.length ? `${t.systems.length} system${t.systems.length === 1 ? "" : "s"}` : "";
+      footer.appendChild(stars);
+      footer.appendChild(sysCount);
+      card.appendChild(footer);
+
+      grid.appendChild(card);
     });
   }
 
-  right.querySelectorAll("th[data-col]").forEach(th => {
-    th.addEventListener("click", () => {
-      const col = th.dataset.col;
-      if (sortCol === col) sortDir *= -1;
-      else { sortCol = col; sortDir = 1; }
-      draw();
-    });
-  });
-
   searchInput.addEventListener("input", draw);
-  areaSelect.addEventListener("change", draw);
-  functionSelect.addEventListener("change", draw);
-  platformSelect.addEventListener("change", draw);
-  mainUseSelect.addEventListener("change", draw);
-  panel.querySelector("#clear-filters").addEventListener("click", () => {
+  sortSelect.addEventListener("change", draw);
+  clearBtn.addEventListener("click", () => {
     searchInput.value = "";
-    [areaSelect, functionSelect, platformSelect, mainUseSelect].forEach(sel => {
-      [...sel.options].forEach(o => (o.selected = false));
-    });
-    draw();
+    filterState.query = "";
+    filterState.areas.clear();
+    filterState.funcs.clear();
+    filterState.platforms.clear();
+    filterState.mainUses.clear();
+    renderList();
   });
 
   draw();

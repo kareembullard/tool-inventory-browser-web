@@ -9,7 +9,7 @@ Browse my real software tool inventory — filter, sort, and see how each tool l
 A static, single-file web app version of [tool-inventory-browser](https://github.com/kareembullard/tool-inventory-browser) (the original Flask + SQLite desktop app). This public version:
 
 - Shows my **actual tool inventory** — 91 tools exported from my Airtable workspace, published deliberately
-- Filterable/sortable table (Area, Function, Platform, Main Use, search) plus a detail page per tool (`#/tool/<id>`) showing features, benefits, integrations, file types, and rating
+- Card grid instead of a table — filter with toggleable pill buttons (Area, Function, Platform, Main Use), search, and a sort dropdown (Name, Rating, Most Linked Systems, Area). Click a card for a full detail page (`#/tool/<id>`) with features, benefits, integrations, file types, and rating
 - **Skill-level badges** on tools I've rated in my Business Skills profile (Airtable = Expert, Google Keep = Expert, TickTick/Notion = Advanced, Microsoft Power BI = Certified PL-300, etc.)
 - **Cross-links to [systems-catalog-explorer-web](https://kareembullard.github.io/systems-catalog-explorer-web/)** — every tool's "Linked Systems" section opens the matching system on that app
 - Makes no network calls
