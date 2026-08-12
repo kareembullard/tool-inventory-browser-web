@@ -4,30 +4,36 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tool & App Inventory Browser</title>
-<meta name="description" content="Filterable, sortable browser over a sample software tool inventory.">
+<meta name="description" content="Browse Kareem Bullard's real software tool inventory — filter, sort, and see how each tool links to his personal systems.">
 <style>
   :root {
     --bg: #f7f8fa; --surface: #ffffff; --border: #e2e5ea; --text: #1a1d23; --text-dim: #6b7280;
-    --accent: #2563eb; --accent-dim: #dbeafe; --radius: 10px;
+    --accent: #2563eb; --accent-dim: #dbeafe; --radius: 10px; --star: #d97706;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #0f1115; --surface: #181b21; --border: #2a2e37; --text: #e5e7eb; --text-dim: #9aa1ad; --accent: #60a5fa; --accent-dim: #1e3a5f; }
+    :root { --bg: #0f1115; --surface: #181b21; --border: #2a2e37; --text: #e5e7eb; --text-dim: #9aa1ad; --accent: #60a5fa; --accent-dim: #1e3a5f; --star: #fbbf24; }
   }
   * { box-sizing: border-box; }
   body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
-  .wrap { max-width: 1000px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
   h1 { font-size: 1.5rem; margin: 0 0 .25rem; }
+  h2 { font-size: 1.15rem; margin: 0 0 .6rem; }
   .sub { color: var(--text-dim); font-size: .92rem; margin: 0 0 1rem; }
   .privacy-note { font-size: .78rem; color: var(--text-dim); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .6rem .8rem; margin-bottom: 1.25rem; }
+  .privacy-note code { background: var(--bg); padding: .05rem .35rem; border-radius: 4px; }
 
-  .layout { display: grid; grid-template-columns: 200px 1fr; gap: 1.25rem; align-items: start; }
-  @media (max-width: 700px) { .layout { grid-template-columns: 1fr; } }
+  nav.crumbs { margin-bottom: 1.1rem; font-size: .88rem; }
+  nav.crumbs a { color: var(--accent); text-decoration: none; cursor: pointer; }
+  nav.crumbs a:hover { text-decoration: underline; }
 
-  .filter-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; }
+  .layout { display: grid; grid-template-columns: 210px 1fr; gap: 1.25rem; align-items: start; }
+  @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } }
+
+  .filter-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; position: sticky; top: 1rem; }
   .filter-panel label { display: block; font-size: .78rem; color: var(--text-dim); margin: .8rem 0 .3rem; }
   .filter-panel label:first-child { margin-top: 0; }
   input[type=search] { width: 100%; padding: .5rem .65rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: .88rem; }
-  select[multiple] { width: 100%; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: .85rem; padding: .3rem; }
+  select[multiple] { width: 100%; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: .83rem; padding: .3rem; }
   select[multiple] option { padding: .25rem .4rem; border-radius: 4px; }
   .btn { padding: .45rem .8rem; border-radius: var(--radius); border: 1px solid var(--border); background: transparent; color: var(--text-dim); font-size: .82rem; cursor: pointer; margin-top: .8rem; width: 100%; }
   .btn:hover { border-color: var(--accent); color: var(--accent); }
@@ -38,9 +44,29 @@
   th { color: var(--text-dim); font-weight: 600; font-size: .74rem; text-transform: uppercase; letter-spacing: .02em; cursor: pointer; user-select: none; }
   th:hover { color: var(--accent); }
   tr:last-child td { border-bottom: none; }
-  .stacked-badge { color: var(--accent); font-weight: 700; }
+  td a.tool-link { color: var(--accent); text-decoration: none; font-weight: 600; cursor: pointer; }
+  td a.tool-link:hover { text-decoration: underline; }
+  .stars { color: var(--star); letter-spacing: 1px; }
   .count { font-size: .8rem; color: var(--text-dim); margin-bottom: .6rem; }
   .empty { text-align: center; color: var(--text-dim); padding: 2rem 0; }
+
+  .tag { display: inline-block; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: .1rem .55rem; font-size: .74rem; color: var(--text-dim); margin: 0 .3rem .3rem 0; }
+  .tag.skill { background: var(--accent-dim); color: var(--accent); border-color: transparent; }
+
+  .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: .8rem; margin: 1rem 0 1.4rem; }
+  .detail-field { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .6rem .8rem; }
+  .detail-field .label { font-size: .72rem; text-transform: uppercase; letter-spacing: .02em; color: var(--text-dim); margin-bottom: .2rem; }
+  .detail-field .value { font-size: .92rem; }
+  .prose { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .8rem 1rem; margin-bottom: 1rem; font-size: .92rem; }
+  .prose .label { font-size: .78rem; text-transform: uppercase; letter-spacing: .02em; color: var(--text-dim); margin-bottom: .3rem; }
+
+  .section { margin-top: 1.5rem; }
+  .section h2 { font-size: 1.02rem; border-bottom: 2px solid var(--border); padding-bottom: .35rem; margin-bottom: .6rem; }
+  ul.entities { list-style: none; margin: 0; padding: 0; }
+  li.entity { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .55rem .85rem; margin-bottom: .5rem; }
+  li.entity a { color: var(--accent); text-decoration: none; font-weight: 600; cursor: pointer; }
+  li.entity a:hover { text-decoration: underline; }
+
   footer { margin-top: 2.5rem; text-align: center; font-size: .78rem; color: var(--text-dim); }
   footer a { color: var(--text-dim); }
 </style>
@@ -48,185 +74,3074 @@
 <body>
 <div class="wrap">
   <h1>🧰 Tool & App Inventory Browser</h1>
-  <p class="sub">Filterable, sortable browser over a sample software tool inventory.</p>
-  <div class="privacy-note">This is a generic example dataset for demo purposes — not anyone's real personal ratings.</div>
+  <p class="sub">Browse my real software tool inventory — filter, sort, and see how each tool links to my personal systems.</p>
+  <div class="privacy-note">This is my real tool inventory (91 tools), exported from my own Airtable workspace. Skill-level badges come from my Business Skills profile note. Systems links point to <code>systems-catalog-explorer-web</code>, another live app of mine.</div>
 
-  <div class="layout">
-    <div class="filter-panel">
-      <label for="search">Search</label>
-      <input type="search" id="search" placeholder="Tool name…">
-
-      <label for="area-select">Area</label>
-      <select id="area-select" multiple size="6"></select>
-
-      <label for="function-select">Function</label>
-      <select id="function-select" multiple size="6"></select>
-
-      <label for="platform-select">Platform</label>
-      <select id="platform-select" multiple size="6"></select>
-
-      <button class="btn" id="clear-filters">Clear filters</button>
-    </div>
-
-    <div>
-      <div class="count" id="count"></div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th data-col="tool">Tool</th>
-              <th data-col="area">Area</th>
-              <th data-col="function">Function</th>
-              <th data-col="platforms">Platforms</th>
-              <th data-col="rating">Rating</th>
-              <th data-col="stacked">Stacked</th>
-            </tr>
-          </thead>
-          <tbody id="table-body"></tbody>
-        </table>
-      </div>
-      <div class="empty" id="empty-msg" style="display:none">No tools match.</div>
-    </div>
-  </div>
+  <div id="app"></div>
 
   <footer>
-    Public demo — generic sample data. Source: <a href="https://github.com/kareembullard/tool-inventory-browser-web" target="_blank" rel="noopener">tool-inventory-browser-web</a>
+    Kareem Bullard's tool inventory. Source: <a href="https://github.com/kareembullard/tool-inventory-browser-web" target="_blank" rel="noopener">tool-inventory-browser-web</a>
   </footer>
 </div>
 
 <script>
-// Generic, publicly-known software as illustrative sample data.
-// Ratings/Stacked flags are representative examples, not anyone's real opinions.
+// Real tool inventory (Kareem Bullard) — from Airtable "Utility - Tools" base.
+// Skill-level badges from the Business Skills profile note; systems cross-link to systems-catalog-explorer-web.
 const TOOLS = [
-  { tool: "Visual Studio Code", area: "Production", function: "Develop", platforms: ["Web", "Windows", "macOS", "Linux"], rating: 5, stacked: true },
-  { tool: "Figma", area: "Production", function: "Design", platforms: ["Web", "Windows", "macOS"], rating: 5, stacked: true },
-  { tool: "Notion", area: "Admin", function: "Record", platforms: ["Web", "Windows", "macOS", "iOS", "Android"], rating: 4, stacked: true },
-  { tool: "Slack", area: "Business", function: "Engage", platforms: ["Web", "Windows", "macOS", "iOS", "Android"], rating: 4, stacked: false },
-  { tool: "Google Calendar", area: "Admin", function: "Plan", platforms: ["Web", "iOS", "Android"], rating: 4, stacked: true },
-  { tool: "Trello", area: "Business", function: "Manage", platforms: ["Web", "iOS", "Android"], rating: 3, stacked: false },
-  { tool: "Excel", area: "Business", function: "Manage", platforms: ["Windows", "macOS", "Web"], rating: 5, stacked: true },
-  { tool: "Photoshop", area: "Production", function: "Design", platforms: ["Windows", "macOS"], rating: 4, stacked: false },
-  { tool: "Zoom", area: "Business", function: "Engage", platforms: ["Web", "Windows", "macOS", "iOS", "Android"], rating: 4, stacked: true },
-  { tool: "GitHub", area: "Production", function: "Develop", platforms: ["Web"], rating: 5, stacked: true },
-  { tool: "Canva", area: "Production", function: "Design", platforms: ["Web", "iOS", "Android"], rating: 4, stacked: false },
-  { tool: "Todoist", area: "Personal", function: "Manage", platforms: ["Web", "Windows", "macOS", "iOS", "Android"], rating: 4, stacked: false },
-  { tool: "Google Drive", area: "Admin", function: "Record", platforms: ["Web", "Windows", "macOS", "iOS", "Android"], rating: 4, stacked: true },
-  { tool: "Spotify", area: "Personal", function: "Engage", platforms: ["Web", "Windows", "macOS", "iOS", "Android"], rating: 5, stacked: false },
-  { tool: "Duolingo", area: "Education", function: "Research", platforms: ["Web", "iOS", "Android"], rating: 3, stacked: false },
-  { tool: "Obsidian", area: "Personal", function: "Record", platforms: ["Windows", "macOS", "Linux", "iOS", "Android"], rating: 4, stacked: false },
-  { tool: "Airtable", area: "Business", function: "Manage", platforms: ["Web", "iOS", "Android"], rating: 4, stacked: true },
-  { tool: "Discord", area: "Social", function: "Engage", platforms: ["Web", "Windows", "macOS", "iOS", "Android"], rating: 3, stacked: false },
-  { tool: "LinkedIn", area: "Social", function: "Network", platforms: ["Web", "iOS", "Android"], rating: 3, stacked: false },
-  { tool: "Chrome", area: "Admin", function: "Research", platforms: ["Web", "Windows", "macOS", "Linux", "iOS", "Android"], rating: 5, stacked: true },
+ {
+  "id": "ableton",
+  "name": "Ableton",
+  "systems": [],
+  "mainUse": "Personal",
+  "area": "Production",
+  "func": "Produce",
+  "device": "Vise",
+  "platforms": [
+   "Windows",
+   "macOS"
+  ],
+  "integrations": [],
+  "freq": "Trigger",
+  "features": "",
+  "fileExt": [
+   ".als",
+   ".wav",
+   ".mp3",
+   ".midi"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "adobe-audition",
+  "name": "Adobe Audition",
+  "systems": [],
+  "mainUse": "Personal",
+  "area": "Production",
+  "func": "Produce",
+  "device": "Vise",
+  "platforms": [
+   "Windows",
+   "macOS"
+  ],
+  "integrations": [],
+  "freq": "Trigger",
+  "features": "",
+  "fileExt": [
+   ".wav",
+   ".mp3",
+   ".aac",
+   ".flac",
+   ".aiff",
+   ".m4a",
+   ".wma"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "adobe-firefly",
+  "name": "Adobe Firefly",
+  "systems": [
+   {
+    "name": "Image Generation System",
+    "id": "image-generation-system"
+   }
+  ],
+  "mainUse": "Business",
+  "area": "Production",
+  "func": "Design",
+  "device": "Align",
+  "platforms": [
+   "Web"
+  ],
+  "integrations": [],
+  "freq": "Weekly",
+  "features": "UI design and prototyping tool",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "adobe-photoshop",
+  "name": "Adobe Photoshop",
+  "systems": [
+   {
+    "name": "Brand Asset Management System",
+    "id": "brand-asset-management-system"
+   }
+  ],
+  "mainUse": "Business",
+  "area": "Production",
+  "func": "Design",
+  "device": "Align",
+  "platforms": [
+   "Windows",
+   "macOS"
+  ],
+  "integrations": [],
+  "freq": "Weekly",
+  "features": "Image editing software",
+  "fileExt": [
+   ".psd",
+   ".jpeg",
+   ".png",
+   ".gif",
+   ".tiff",
+   ".raw",
+   ".pdf"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "airtable",
+  "name": "Airtable",
+  "systems": [
+   {
+    "name": "Tool Integration Hub",
+    "id": "tool-integration-hub"
+   },
+   {
+    "name": "Data Documents And Content Index",
+    "id": "data-documents-and-content-index"
+   },
+   {
+    "name": "Social Tracking System",
+    "id": "social-tracking-system"
+   },
+   {
+    "name": "Network Tracking System",
+    "id": "network-tracking-system"
+   },
+   {
+    "name": "Content Management System",
+    "id": "content-management-system"
+   },
+   {
+    "name": "Production Systems",
+    "id": "production-systems"
+   },
+   {
+    "name": "Article Database System",
+    "id": "article-database-system"
+   },
+   {
+    "name": "Sales Lead Generation System",
+    "id": "sales-lead-generation-system"
+   },
+   {
+    "name": "Distrokid Release System",
+    "id": "distrokid-release-system"
+   },
+   {
+    "name": "Automation System",
+    "id": "automation-system"
+   },
+   {
+    "name": "Chatgpt For Fiverr System",
+    "id": "chatgpt-for-fiverr-system"
+   },
+   {
+    "name": "Aptitude Profile System",
+    "id": "aptitude-profile-system"
+   },
+   {
+    "name": "Business Networking System",
+    "id": "business-networking-system"
+   },
+   {
+    "name": "Comprehensive Packages",
+    "id": "comprehensive-packages"
+   },
+   {
+    "name": "Health Monitoring System",
+    "id": "health-monitoring-system"
+   },
+   {
+    "name": "IP Assets Management System",
+    "id": "ip-assets-management-system"
+   },
+   {
+    "name": "Real Estate Management System",
+    "id": "real-estate-management-system"
+   },
+   {
+    "name": "Stockholders Management System",
+    "id": "stockholders-management-system"
+   },
+   {
+    "name": "Tool Integration System",
+    "id": "tool-integration-system"
+   },
+   {
+    "name": "Wealth Building System",
+    "id": "wealth-building-system"
+   }
+  ],
+  "mainUse": "Business",
+  "area": "Admin",
+  "func": "Manage",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS",
+   "macOS",
+   "Windows",
+   "Linux"
+  ],
+  "integrations": [
+   "Airtable Forms",
+   "Canva",
+   "ClickUp",
+   "Google Calendar",
+   "Google Drive",
+   "Miro",
+   "Notion",
+   "OneDrive",
+   "Power BI",
+   "Trello",
+   "Whimsical"
+  ],
+  "freq": "Daily",
+  "features": "Database,spreadsheet,project management",
+  "fileExt": [
+   ".csv",
+   ".xlsx",
+   ".pdf",
+   ".docx",
+   ".txt",
+   ".json"
+  ],
+  "benefits": "Customizable, collaborative, user-friendly",
+  "task": "Managing projects, organizing data, visualizing workflows",
+  "rating": 5,
+  "skill": "Expert"
+ },
+ {
+  "id": "airtable-forms",
+  "name": "Airtable Forms",
+  "systems": [
+   {
+    "name": "Community Engagement System",
+    "id": "community-engagement-system"
+   }
+  ],
+  "mainUse": "Business",
+  "area": "Admin",
+  "func": "Engage",
+  "device": "Align",
+  "platforms": [
+   "Web"
+  ],
+  "integrations": [
+   "Airtable"
+  ],
+  "freq": "Trigger",
+  "features": "Database management tool",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": 3,
+  "skill": ""
+ },
+ {
+  "id": "alexa",
+  "name": "Alexa",
+  "systems": [
+   {
+    "name": "Entertaining Management System",
+    "id": "entertaining-management-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Life",
+  "func": "Manage",
+  "device": "Alexa",
+  "platforms": [
+   "iOS",
+   "Android",
+   "Amazon Echo Devices"
+  ],
+  "integrations": [],
+  "freq": "Automated",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "amazon-echo-devices",
+  "name": "Amazon Echo Devices",
+  "systems": [],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "android",
+  "name": "Android",
+  "systems": [],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "bard",
+  "name": "Bard",
+  "systems": [],
+  "mainUse": "Business",
+  "area": "Production",
+  "func": "Develop",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS",
+   "Windows"
+  ],
+  "integrations": [],
+  "freq": "Daily",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": 4,
+  "skill": ""
+ },
+ {
+  "id": "bing-ai",
+  "name": "Bing AI",
+  "systems": [
+   {
+    "name": "Image Generation System",
+    "id": "image-generation-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Admin",
+  "func": "Research",
+  "device": "Note",
+  "platforms": [
+   "Web",
+   "iOS",
+   "Android"
+  ],
+  "integrations": [],
+  "freq": "Trigger",
+  "features": "Language processing,image recognition,sentiment analysis",
+  "fileExt": [],
+  "benefits": "Advanced AI technology, customizable, scalable",
+  "task": "Data analysis, customer insights, automation",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "bixby",
+  "name": "Bixby",
+  "systems": [],
+  "mainUse": "Personal",
+  "area": "Life",
+  "func": "Manage",
+  "device": "Watch",
+  "platforms": [
+   "Samsung Devices",
+   "Android"
+  ],
+  "integrations": [],
+  "freq": "Trigger",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "calm",
+  "name": "Calm",
+  "systems": [
+   {
+    "name": "Confidence-building System",
+    "id": "confidence-building-system"
+   },
+   {
+    "name": "Detoxing System",
+    "id": "detoxing-system"
+   },
+   {
+    "name": "Emotion Regulation System",
+    "id": "emotion-regulation-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Life",
+  "func": "Develop",
+  "device": "Note",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Daily",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "canva",
+  "name": "Canva",
+  "systems": [
+   {
+    "name": "Brand Asset Management System",
+    "id": "brand-asset-management-system"
+   },
+   {
+    "name": "Brand Management System",
+    "id": "brand-management-system"
+   },
+   {
+    "name": "Comprehensive Packages",
+    "id": "comprehensive-packages"
+   },
+   {
+    "name": "E-commerce Management System",
+    "id": "e-commerce-management-system"
+   },
+   {
+    "name": "Marketing System",
+    "id": "marketing-system"
+   },
+   {
+    "name": "Socially Responsible Content System",
+    "id": "socially-responsible-content-system"
+   }
+  ],
+  "mainUse": "Business",
+  "area": "Production",
+  "func": "Design",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "iOS",
+   "Android"
+  ],
+  "integrations": [
+   "Airtable",
+   "Miro",
+   "Notion",
+   "Whimsical"
+  ],
+  "freq": "Weekly",
+  "features": "",
+  "fileExt": [
+   ".jpg",
+   ".png",
+   ".pdf",
+   ".svg"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": 5,
+  "skill": ""
+ },
+ {
+  "id": "chatgpt",
+  "name": "ChatGPT",
+  "systems": [
+   {
+    "name": "Chatgpt For Fiverr System",
+    "id": "chatgpt-for-fiverr-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Admin",
+  "func": "Research",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "Android"
+  ],
+  "integrations": [],
+  "freq": "Daily",
+  "features": "AI chatbot,language processing",
+  "fileExt": [],
+  "benefits": "Automated customer support, 24/7 availability, personalized interaction",
+  "task": "Resolving customer inquiries, providing automated assistance",
+  "rating": null,
+  "skill": "Advancing"
+ },
+ {
+  "id": "claude",
+  "name": "Claude",
+  "systems": [
+   {
+    "name": "Document Management System",
+    "id": "document-management-system"
+   }
+  ],
+  "mainUse": "Business",
+  "area": "Admin",
+  "func": "Develop",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "Windows"
+  ],
+  "integrations": [],
+  "freq": "Daily",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": 5,
+  "skill": "Advancing"
+ },
+ {
+  "id": "clickup",
+  "name": "ClickUp",
+  "systems": [
+   {
+    "name": "Project Management System",
+    "id": "project-management-system"
+   },
+   {
+    "name": "Task Management System",
+    "id": "task-management-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Admin",
+  "func": "Manage",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "iOS",
+   "Android"
+  ],
+  "integrations": [
+   "Airtable",
+   "Miro",
+   "Notion",
+   "Trello"
+  ],
+  "freq": "Daily",
+  "features": "Project management,time tracking,collaboration",
+  "fileExt": [
+   ".txt",
+   ".csv",
+   ".pdf",
+   ".docx"
+  ],
+  "benefits": "All-in-one productivity platform, customization, automation",
+  "task": "Managing projects, tracking progress, scheduling tasks",
+  "rating": 5,
+  "skill": ""
+ },
+ {
+  "id": "confluence",
+  "name": "Confluence",
+  "systems": [],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "distrokid",
+  "name": "Distrokid",
+  "systems": [
+   {
+    "name": "Distrokid Release System",
+    "id": "distrokid-release-system"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "dreamweaver",
+  "name": "Dreamweaver",
+  "systems": [
+   {
+    "name": "Blog Management System",
+    "id": "blog-management-system"
+   },
+   {
+    "name": "Writing Management System",
+    "id": "writing-management-system"
+   },
+   {
+    "name": "Production Systems",
+    "id": "production-systems"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "duolingo",
+  "name": "Duolingo",
+  "systems": [
+   {
+    "name": "Certification and Skills System",
+    "id": "certification-and-skills-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Education",
+  "func": "Research",
+  "device": "Tablet",
+  "platforms": [
+   "Web",
+   "iOS",
+   "Android"
+  ],
+  "integrations": [],
+  "freq": "Daily",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "everything",
+  "name": "Everything",
+  "systems": [
+   {
+    "name": "Data Documents And Content Index",
+    "id": "data-documents-and-content-index"
+   },
+   {
+    "name": "Document Management System",
+    "id": "document-management-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Admin",
+  "func": "Manage",
+  "device": "Align",
+  "platforms": [
+   "Windows"
+  ],
+  "integrations": [],
+  "freq": "Trigger",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "facebook",
+  "name": "Facebook",
+  "systems": [
+   {
+    "name": "Advertising System",
+    "id": "advertising-system"
+   },
+   {
+    "name": "Community Engagement System",
+    "id": "community-engagement-system"
+   }
+  ],
+  "mainUse": "Social",
+  "area": "Social",
+  "func": "Market",
+  "device": "Note",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Daily",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "figma",
+  "name": "Figma",
+  "systems": [],
+  "mainUse": "Business",
+  "area": "Production",
+  "func": "Design",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "Windows",
+   "macOS",
+   "Linux"
+  ],
+  "integrations": [],
+  "freq": "Weekly",
+  "features": "",
+  "fileExt": [
+   ".fig",
+   ".svg",
+   ".png",
+   ".pdf",
+   ".jpg"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "fiverr",
+  "name": "Fiverr",
+  "systems": [
+   {
+    "name": "Chatgpt For Fiverr System",
+    "id": "chatgpt-for-fiverr-system"
+   },
+   {
+    "name": "Freelancing System",
+    "id": "freelancing-system"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "github",
+  "name": "Github",
+  "systems": [
+   {
+    "name": "Lab Building System",
+    "id": "lab-building-system"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "google-admin-console",
+  "name": "Google Admin Console",
+  "systems": [],
+  "mainUse": "Business",
+  "area": "Business",
+  "func": "Manage",
+  "device": "Align",
+  "platforms": [
+   "Web"
+  ],
+  "integrations": [],
+  "freq": "Trigger",
+  "features": "Management tool for Google Workspace",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "google-assistant",
+  "name": "Google Assistant",
+  "systems": [],
+  "mainUse": "Personal",
+  "area": "Life",
+  "func": "Manage",
+  "device": "Note",
+  "platforms": [
+   "Android",
+   "iOS",
+   "Web"
+  ],
+  "integrations": [],
+  "freq": "Trigger",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "google-calendar",
+  "name": "Google Calendar",
+  "systems": [
+   {
+    "name": "Networking Events Management System",
+    "id": "networking-events-management-system"
+   },
+   {
+    "name": "Personal Accountability System",
+    "id": "personal-accountability-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Admin",
+  "func": "Plan",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [
+   "Airtable",
+   "Google Drive",
+   "Google Meet"
+  ],
+  "freq": "Weekly",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": 4,
+  "skill": ""
+ },
+ {
+  "id": "google-clock",
+  "name": "Google Clock",
+  "systems": [
+   {
+    "name": "Sleep Routine System",
+    "id": "sleep-routine-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Admin",
+  "func": "Schedule",
+  "device": "Watch",
+  "platforms": [
+   "Android"
+  ],
+  "integrations": [],
+  "freq": "Daily",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "google-drive",
+  "name": "Google Drive",
+  "systems": [
+   {
+    "name": "Brand Asset Management System",
+    "id": "brand-asset-management-system"
+   },
+   {
+    "name": "IP Assets Management System",
+    "id": "ip-assets-management-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Admin",
+  "func": "Record",
+  "device": "Vise",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS",
+   "macOS",
+   "Windows",
+   "Linux"
+  ],
+  "integrations": [
+   "Airtable",
+   "Google Calendar",
+   "Miro",
+   "Notion"
+  ],
+  "freq": "Trigger",
+  "features": "Cloud storage and file sharing",
+  "fileExt": [
+   ".doc",
+   ".docx",
+   ".xls",
+   ".xlsx",
+   ".ppt",
+   ".pptx",
+   ".pdf",
+   ".txt",
+   ".csv",
+   ".jpg"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": 4,
+  "skill": ""
+ },
+ {
+  "id": "google-gmail",
+  "name": "Google Gmail",
+  "systems": [
+   {
+    "name": "Relationship Engagement System",
+    "id": "relationship-engagement-system"
+   }
+  ],
+  "mainUse": "Business",
+  "area": "Social",
+  "func": "Engage",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Daily",
+  "features": "",
+  "fileExt": [
+   ".eml",
+   ".msg",
+   ".pst"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "google-home-devices",
+  "name": "Google Home Devices",
+  "systems": [
+   {
+    "name": "Entertaining Management System",
+    "id": "entertaining-management-system"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "google-keep",
+  "name": "Google Keep",
+  "systems": [
+   {
+    "name": "Diet Planning System",
+    "id": "diet-planning-system"
+   },
+   {
+    "name": "Emotion Regulation System",
+    "id": "emotion-regulation-system"
+   },
+   {
+    "name": "Journaling System",
+    "id": "journaling-system"
+   },
+   {
+    "name": "Keto and Pescatarian Diet System",
+    "id": "keto-and-pescatarian-diet-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Admin",
+  "func": "Record",
+  "device": "Note",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Trigger",
+  "features": "Note-taking and task management",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": "Expert"
+ },
+ {
+  "id": "google-meet",
+  "name": "Google Meet",
+  "systems": [
+   {
+    "name": "Video Chat System",
+    "id": "video-chat-system"
+   },
+   {
+    "name": "Video Communication System",
+    "id": "video-communication-system"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "google-nest",
+  "name": "Google Nest",
+  "systems": [],
+  "mainUse": "Personal",
+  "area": "Life",
+  "func": "Manage",
+  "device": "Nest",
+  "platforms": [
+   "Android",
+   "iOS",
+   "Google Home Devices"
+  ],
+  "integrations": [],
+  "freq": "Automated",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "google-photos",
+  "name": "Google Photos",
+  "systems": [],
+  "mainUse": "Personal",
+  "area": "Admin",
+  "func": "Design",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Monthly",
+  "features": "",
+  "fileExt": [
+   ".jpg",
+   ".png",
+   ".gif",
+   ".mp4"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "google-task",
+  "name": "Google Task",
+  "systems": [
+   {
+    "name": "Task Management System",
+    "id": "task-management-system"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "google-voice",
+  "name": "Google Voice",
+  "systems": [
+   {
+    "name": "Relationship Engagement System",
+    "id": "relationship-engagement-system"
+   }
+  ],
+  "mainUse": "Social",
+  "area": "Social",
+  "func": "Engage",
+  "device": "Note",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Weekly",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "grammarly",
+  "name": "Grammarly",
+  "systems": [
+   {
+    "name": "Blog Article Development System",
+    "id": "blog-article-development-system"
+   },
+   {
+    "name": "Memoir Writing System",
+    "id": "memoir-writing-system"
+   },
+   {
+    "name": "Socially Responsible Content System",
+    "id": "socially-responsible-content-system"
+   },
+   {
+    "name": "Writing Management System",
+    "id": "writing-management-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Production",
+  "func": "Produce",
+  "device": "Tablet",
+  "platforms": [
+   "Web",
+   "Windows",
+   "macOS",
+   "iOS",
+   "Android"
+  ],
+  "integrations": [],
+  "freq": "Automated",
+  "features": "Writing assistant",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "hootsuite",
+  "name": "Hootsuite",
+  "systems": [
+   {
+    "name": "Social Tracking System",
+    "id": "social-tracking-system"
+   },
+   {
+    "name": "Brand Trust System",
+    "id": "brand-trust-system"
+   },
+   {
+    "name": "Marketing System",
+    "id": "marketing-system"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "hubspot",
+  "name": "Hubspot",
+  "systems": [
+   {
+    "name": "Sales Lead Generation System",
+    "id": "sales-lead-generation-system"
+   },
+   {
+    "name": "Freelancing System",
+    "id": "freelancing-system"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "icloud",
+  "name": "iCloud",
+  "systems": [],
+  "mainUse": "Personal",
+  "area": "Admin",
+  "func": "Record",
+  "device": "iPad",
+  "platforms": [
+   "macOS",
+   "iOS",
+   "Web"
+  ],
+  "integrations": [],
+  "freq": "Trigger",
+  "features": "Cloud storage and file sharing",
+  "fileExt": [
+   ".pages",
+   ".numbers",
+   ".keynote",
+   ".docx",
+   ".xlsx",
+   ".pptx"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "instagram",
+  "name": "Instagram",
+  "systems": [
+   {
+    "name": "Advertising System",
+    "id": "advertising-system"
+   }
+  ],
+  "mainUse": "Social",
+  "area": "Social",
+  "func": "Market",
+  "device": "Note",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Weekly",
+  "features": "",
+  "fileExt": [
+   ".jpg",
+   ".png",
+   ".mp4"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "ios",
+  "name": "iOS",
+  "systems": [],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "linkedin",
+  "name": "LinkedIn",
+  "systems": [
+   {
+    "name": "Business Networking System",
+    "id": "business-networking-system"
+   },
+   {
+    "name": "Digital Presence System",
+    "id": "digital-presence-system"
+   },
+   {
+    "name": "LinkedIn Learning System",
+    "id": "linkedin-learning-system"
+   },
+   {
+    "name": "Networking Events Management System",
+    "id": "networking-events-management-system"
+   },
+   {
+    "name": "Professional Networking System",
+    "id": "professional-networking-system"
+   }
+  ],
+  "mainUse": "Business",
+  "area": "Career",
+  "func": "Network",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Daily",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "linkedin-learning",
+  "name": "LinkedIn Learning",
+  "systems": [
+   {
+    "name": "Aptitude Profile System",
+    "id": "aptitude-profile-system"
+   },
+   {
+    "name": "Certification and Skills System",
+    "id": "certification-and-skills-system"
+   },
+   {
+    "name": "LinkedIn Learning System",
+    "id": "linkedin-learning-system"
+   },
+   {
+    "name": "PMP Certification Study System",
+    "id": "pmp-certification-study-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Education",
+  "func": "Research",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Weekly",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "linux",
+  "name": "Linux",
+  "systems": [
+   {
+    "name": "Lab Building System",
+    "id": "lab-building-system"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "macos",
+  "name": "macOS",
+  "systems": [],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "make-com",
+  "name": "Make.Com",
+  "systems": [
+   {
+    "name": "Tool Integration Hub",
+    "id": "tool-integration-hub"
+   },
+   {
+    "name": "Automation System",
+    "id": "automation-system"
+   },
+   {
+    "name": "Tool Integration System",
+    "id": "tool-integration-system"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": "Advancing"
+ },
+ {
+  "id": "mem-ai",
+  "name": "Mem.Ai",
+  "systems": [
+   {
+    "name": "Thought Processing System",
+    "id": "thought-processing-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Production",
+  "func": "Record",
+  "device": "Align",
+  "platforms": [
+   "Web"
+  ],
+  "integrations": [
+   "Notion"
+  ],
+  "freq": "Weekly",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "microsoft-365",
+  "name": "Microsoft 365",
+  "systems": [],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "microsoft-365-security",
+  "name": "Microsoft 365 Security",
+  "systems": [
+   {
+    "name": "IP Security System",
+    "id": "ip-security-system"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "microsoft-azure",
+  "name": "Microsoft Azure",
+  "systems": [
+   {
+    "name": "IP Security System",
+    "id": "ip-security-system"
+   }
+  ],
+  "mainUse": "Business",
+  "area": "Admin",
+  "func": "Engage",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "Windows",
+   "macOS",
+   "Linux"
+  ],
+  "integrations": [],
+  "freq": "Trigger",
+  "features": "Cloud computing and services",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "microsoft-designer",
+  "name": "Microsoft Designer",
+  "systems": [],
+  "mainUse": "Business",
+  "area": "Production",
+  "func": "Design",
+  "device": "Align",
+  "platforms": [
+   "Windows",
+   "Web"
+  ],
+  "integrations": [],
+  "freq": "Monthly",
+  "features": "Graphic design and layout tool",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "microsoft-excel",
+  "name": "Microsoft Excel",
+  "systems": [
+   {
+    "name": "Reporting System",
+    "id": "reporting-system"
+   },
+   {
+    "name": "Wealth Management System",
+    "id": "wealth-management-system"
+   },
+   {
+    "name": "Financial System",
+    "id": "financial-system"
+   },
+   {
+    "name": "Credit Score System",
+    "id": "credit-score-system"
+   },
+   {
+    "name": "Project Reporting System",
+    "id": "project-reporting-system"
+   },
+   {
+    "name": "Real Estate Management System",
+    "id": "real-estate-management-system"
+   },
+   {
+    "name": "Stockholders Management System",
+    "id": "stockholders-management-system"
+   },
+   {
+    "name": "Wealth Building System",
+    "id": "wealth-building-system"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": "Advancing"
+ },
+ {
+  "id": "microsoft-money",
+  "name": "Microsoft Money",
+  "systems": [
+   {
+    "name": "Wealth Management System",
+    "id": "wealth-management-system"
+   },
+   {
+    "name": "Credit Score System",
+    "id": "credit-score-system"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "microsoft-onedrive",
+  "name": "Microsoft OneDrive",
+  "systems": [
+   {
+    "name": "Data Documents And Content Index",
+    "id": "data-documents-and-content-index"
+   },
+   {
+    "name": "Document Management System",
+    "id": "document-management-system"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "microsoft-onenote",
+  "name": "Microsoft OneNote",
+  "systems": [
+   {
+    "name": "Journaling System",
+    "id": "journaling-system"
+   },
+   {
+    "name": "PMP Certification Study System",
+    "id": "pmp-certification-study-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Admin",
+  "func": "Record",
+  "device": "Align",
+  "platforms": [
+   "Windows",
+   "macOS",
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Daily",
+  "features": "",
+  "fileExt": [
+   ".one",
+   ".onetoc",
+   ".onepkg"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "microsoft-outlook",
+  "name": "Microsoft Outlook",
+  "systems": [],
+  "mainUse": "Social",
+  "area": "Social",
+  "func": "Engage",
+  "device": "Note",
+  "platforms": [
+   "Windows",
+   "macOS",
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Daily",
+  "features": "",
+  "fileExt": [
+   ".pst",
+   ".msg",
+   ".eml",
+   ".ost"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": "Advancing"
+ },
+ {
+  "id": "microsoft-planner",
+  "name": "Microsoft Planner",
+  "systems": [
+   {
+    "name": "Career Management System",
+    "id": "career-management-system"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "microsoft-power-bi",
+  "name": "Microsoft Power BI",
+  "systems": [
+   {
+    "name": "Reporting System",
+    "id": "reporting-system"
+   },
+   {
+    "name": "Financial System",
+    "id": "financial-system"
+   },
+   {
+    "name": "Project Reporting System",
+    "id": "project-reporting-system"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": "Certified (PL-300)"
+ },
+ {
+  "id": "microsoft-teams",
+  "name": "Microsoft Teams",
+  "systems": [
+   {
+    "name": "Project Management System",
+    "id": "project-management-system"
+   },
+   {
+    "name": "Video Chat System",
+    "id": "video-chat-system"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "microsoft-word",
+  "name": "Microsoft Word",
+  "systems": [
+   {
+    "name": "Writing Management System",
+    "id": "writing-management-system"
+   },
+   {
+    "name": "Blog Article Development System",
+    "id": "blog-article-development-system"
+   },
+   {
+    "name": "Business SOPs System",
+    "id": "business-sops-system"
+   },
+   {
+    "name": "Memoir Writing System",
+    "id": "memoir-writing-system"
+   }
+  ],
+  "mainUse": "Business",
+  "area": "Production",
+  "func": "Produce",
+  "device": "Align",
+  "platforms": [
+   "Windows",
+   "macOS",
+   "Web"
+  ],
+  "integrations": [],
+  "freq": "Daily",
+  "features": "Word processing,document creation,editing",
+  "fileExt": [
+   ".doc",
+   ".docx",
+   ".txt",
+   ".pdf"
+  ],
+  "benefits": "User-friendly, flexible, widely used",
+  "task": "Writing, editing, creating documents",
+  "rating": null,
+  "skill": "Advancing"
+ },
+ {
+  "id": "miro",
+  "name": "Miro",
+  "systems": [
+   {
+    "name": "Thought Processing System",
+    "id": "thought-processing-system"
+   }
+  ],
+  "mainUse": "Business",
+  "area": "Social",
+  "func": "Plan",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "Windows",
+   "macOS",
+   "Linux"
+  ],
+  "integrations": [
+   "Airtable",
+   "Google Drive",
+   "ClickUp",
+   "Excel",
+   "Microsoft Excel",
+   "Trello"
+  ],
+  "freq": "Trigger",
+  "features": "Online whiteboard platform",
+  "fileExt": [
+   ".png",
+   ".jpg",
+   ".pdf",
+   ".svg"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": 3,
+  "skill": ""
+ },
+ {
+  "id": "modes-and-routines",
+  "name": "Modes and Routines",
+  "systems": [
+   {
+    "name": "Detoxing System",
+    "id": "detoxing-system"
+   },
+   {
+    "name": "Optimize Life Management System",
+    "id": "optimize-life-management-system"
+   },
+   {
+    "name": "Sleep Routine System",
+    "id": "sleep-routine-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Life",
+  "func": "Schedule",
+  "device": "Note",
+  "platforms": [
+   "Android",
+   "Samsung Devices"
+  ],
+  "integrations": [],
+  "freq": "Automated",
+  "features": "Smart home automation app",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "notion",
+  "name": "Notion",
+  "systems": [
+   {
+    "name": "Business SOPs System",
+    "id": "business-sops-system"
+   },
+   {
+    "name": "Production Management System",
+    "id": "production-management-system"
+   }
+  ],
+  "mainUse": "Business",
+  "area": "Production",
+  "func": "Record",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "Windows",
+   "macOS",
+   "iOS",
+   "Android"
+  ],
+  "integrations": [
+   "Airtable",
+   "Miro",
+   "Google Drive",
+   "OneDrive",
+   "ClickUp",
+   "Trello"
+  ],
+  "freq": "Weekly",
+  "features": "Note-taking,task management,database",
+  "fileExt": [
+   ".txt",
+   ".csv",
+   ".pdf",
+   ".docx",
+   ".jpg",
+   ".png"
+  ],
+  "benefits": "All-in-one workspace, collaboration, customization",
+  "task": "Organizing tasks, project planning, content creation",
+  "rating": 4,
+  "skill": "Advanced"
+ },
+ {
+  "id": "photoleap",
+  "name": "Photoleap",
+  "systems": [],
+  "mainUse": "Personal",
+  "area": "Production",
+  "func": "Design",
+  "device": "Note",
+  "platforms": [
+   "iOS",
+   "Android"
+  ],
+  "integrations": [],
+  "freq": "Weekly",
+  "features": "",
+  "fileExt": [
+   ".jpg",
+   ".png"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "picsart",
+  "name": "PicsArt",
+  "systems": [
+   {
+    "name": "Image Generation System",
+    "id": "image-generation-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Production",
+  "func": "Design",
+  "device": "Note",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Weekly",
+  "features": "Photo and video editing app",
+  "fileExt": [
+   ".jpg",
+   ".png"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "pinterest",
+  "name": "Pinterest",
+  "systems": [
+   {
+    "name": "Keto and Pescatarian Diet System",
+    "id": "keto-and-pescatarian-diet-system"
+   }
+  ],
+  "mainUse": "Business",
+  "area": "Education",
+  "func": "Research",
+  "device": "iPad",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Daily",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "proxmox",
+  "name": "Proxmox",
+  "systems": [
+   {
+    "name": "Lab Building System",
+    "id": "lab-building-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Admin",
+  "func": "Manage",
+  "device": "Align",
+  "platforms": [
+   "Linux",
+   "Web"
+  ],
+  "integrations": [],
+  "freq": "Trigger",
+  "features": "Virtualization management platform",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": "Advancing"
+ },
+ {
+  "id": "routinery",
+  "name": "Routinery",
+  "systems": [
+   {
+    "name": "Behavior Management System",
+    "id": "behavior-management-system"
+   },
+   {
+    "name": "Optimize Life Management System",
+    "id": "optimize-life-management-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Life",
+  "func": "Schedule",
+  "device": "Note",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Daily",
+  "features": "Routine management,habit tracking,goal setting",
+  "fileExt": [],
+  "benefits": "Simple and efficient, customizable, habit-forming",
+  "task": "Establishing habits, tracking progress, achieving goals",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "samsung-devices",
+  "name": "Samsung Devices",
+  "systems": [
+   {
+    "name": "Cardio Exercise System",
+    "id": "cardio-exercise-system"
+   },
+   {
+    "name": "Health Monitoring System",
+    "id": "health-monitoring-system"
+   },
+   {
+    "name": "Muscle Building System",
+    "id": "muscle-building-system"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "scribd",
+  "name": "Scribd",
+  "systems": [],
+  "mainUse": "Personal",
+  "area": "Education",
+  "func": "Research",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Weekly",
+  "features": "",
+  "fileExt": [
+   ".pdf"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "shopify",
+  "name": "Shopify",
+  "systems": [
+   {
+    "name": "E-commerce Management System",
+    "id": "e-commerce-management-system"
+   }
+  ],
+  "mainUse": "Business",
+  "area": "Social",
+  "func": "Sale",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "iOS",
+   "Android"
+  ],
+  "integrations": [],
+  "freq": "Weekly",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "slack",
+  "name": "Slack",
+  "systems": [],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "slideshare",
+  "name": "Slideshare",
+  "systems": [],
+  "mainUse": "Personal",
+  "area": "Education",
+  "func": "Research",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Trigger",
+  "features": "",
+  "fileExt": [
+   ".ppt",
+   ".pptx",
+   ".pdf"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": "Advanced"
+ },
+ {
+  "id": "snapchat",
+  "name": "Snapchat",
+  "systems": [
+   {
+    "name": "Family and Friends Social System",
+    "id": "family-and-friends-social-system"
+   }
+  ],
+  "mainUse": "Social",
+  "area": "Social",
+  "func": "Engage",
+  "device": "Note",
+  "platforms": [
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Daily",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "ticktick",
+  "name": "TickTick",
+  "systems": [
+   {
+    "name": "Career Management System",
+    "id": "career-management-system"
+   },
+   {
+    "name": "Project Management System",
+    "id": "project-management-system"
+   },
+   {
+    "name": "Behavior Management System",
+    "id": "behavior-management-system"
+   },
+   {
+    "name": "Confidence-building System",
+    "id": "confidence-building-system"
+   },
+   {
+    "name": "Diet Planning System",
+    "id": "diet-planning-system"
+   },
+   {
+    "name": "Optimize Life Management System",
+    "id": "optimize-life-management-system"
+   },
+   {
+    "name": "Personal Accountability System",
+    "id": "personal-accountability-system"
+   },
+   {
+    "name": "Task Management System",
+    "id": "task-management-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Admin",
+  "func": "Manage",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS",
+   "macOS",
+   "Windows",
+   "Linux"
+  ],
+  "integrations": [],
+  "freq": "Daily",
+  "features": "Task management,reminders,calendar",
+  "fileExt": [],
+  "benefits": "Simple and intuitive, customizable, gamification",
+  "task": "Organizing tasks, time management, goal setting",
+  "rating": null,
+  "skill": "Advanced"
+ },
+ {
+  "id": "trello",
+  "name": "Trello",
+  "systems": [
+   {
+    "name": "Production Management System",
+    "id": "production-management-system"
+   }
+  ],
+  "mainUse": "Business",
+  "area": "Production",
+  "func": "Engage",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [
+   "Airtable",
+   "ClickUp",
+   "Miro",
+   "Microsoft Excel",
+   "Notion"
+  ],
+  "freq": "Weekly",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": 4,
+  "skill": "General"
+ },
+ {
+  "id": "twitter",
+  "name": "Twitter",
+  "systems": [
+   {
+    "name": "Brand Trust System",
+    "id": "brand-trust-system"
+   },
+   {
+    "name": "Professional Networking System",
+    "id": "professional-networking-system"
+   }
+  ],
+  "mainUse": "Social",
+  "area": "Social",
+  "func": "Network",
+  "device": "iPad",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Weekly",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "visual-studio-code",
+  "name": "Visual Studio Code",
+  "systems": [
+   {
+    "name": "Lab Building System",
+    "id": "lab-building-system"
+   }
+  ],
+  "mainUse": "Business",
+  "area": "Production",
+  "func": "Design",
+  "device": "Align",
+  "platforms": [
+   "Windows",
+   "macOS",
+   "Linux"
+  ],
+  "integrations": [],
+  "freq": "Weekly",
+  "features": "",
+  "fileExt": [
+   ".txt",
+   ".md",
+   ".html",
+   ".css",
+   ".js",
+   ".py"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "vivaldi-browser",
+  "name": "Vivaldi Browser",
+  "systems": [],
+  "mainUse": "Personal",
+  "area": "Admin",
+  "func": "Research",
+  "device": "Align",
+  "platforms": [
+   "Windows",
+   "macOS",
+   "Linux",
+   "Android"
+  ],
+  "integrations": [],
+  "freq": "Daily",
+  "features": "Web browser,tab management,customization",
+  "fileExt": [],
+  "benefits": "Fast and efficient, customizable, privacy-focused",
+  "task": "Browsing the web, managing tabs, productivity",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "web",
+  "name": "Web",
+  "systems": [],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "whatsapp",
+  "name": "WhatsApp",
+  "systems": [
+   {
+    "name": "Community Engagement System",
+    "id": "community-engagement-system"
+   },
+   {
+    "name": "Family and Friends Social System",
+    "id": "family-and-friends-social-system"
+   },
+   {
+    "name": "Relationship Engagement System",
+    "id": "relationship-engagement-system"
+   }
+  ],
+  "mainUse": "Social",
+  "area": "Social",
+  "func": "Engage",
+  "device": "Note",
+  "platforms": [
+   "Android",
+   "iOS",
+   "Windows",
+   "macOS",
+   "Web"
+  ],
+  "integrations": [],
+  "freq": "Weekly",
+  "features": "",
+  "fileExt": [
+   ".txt",
+   ".jpg",
+   ".mp4"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "whimsical",
+  "name": "Whimsical",
+  "systems": [
+   {
+    "name": "Network Tracking System",
+    "id": "network-tracking-system"
+   },
+   {
+    "name": "Brand Management System",
+    "id": "brand-management-system"
+   },
+   {
+    "name": "Thought Processing System",
+    "id": "thought-processing-system"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Admin",
+  "func": "Plan",
+  "device": "Align",
+  "platforms": [
+   "Web"
+  ],
+  "integrations": [
+   "Airtable",
+   "Canva",
+   "Notion"
+  ],
+  "freq": "Weekly",
+  "features": "Diagramming,wireframing,flowcharting",
+  "fileExt": [
+   ".png",
+   ".jpg",
+   ".pdf"
+  ],
+  "benefits": "Collaborative, easy to use, professional-looking outputs",
+  "task": "Creating diagrams, prototyping, visualizing workflows",
+  "rating": 5,
+  "skill": "Advancing"
+ },
+ {
+  "id": "windows",
+  "name": "Windows",
+  "systems": [],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "wordpress",
+  "name": "Wordpress",
+  "systems": [
+   {
+    "name": "Blog Management System",
+    "id": "blog-management-system"
+   },
+   {
+    "name": "Content Management System",
+    "id": "content-management-system"
+   },
+   {
+    "name": "Article Database System",
+    "id": "article-database-system"
+   },
+   {
+    "name": "Blog Article Development System",
+    "id": "blog-article-development-system"
+   },
+   {
+    "name": "Digital Presence System",
+    "id": "digital-presence-system"
+   }
+  ],
+  "mainUse": "Business",
+  "area": "Social",
+  "func": "Engage",
+  "device": "Align",
+  "platforms": [
+   "Web",
+   "iOS",
+   "Android"
+  ],
+  "integrations": [],
+  "freq": "Daily",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "youcam-makeup",
+  "name": "YouCam Makeup",
+  "systems": [],
+  "mainUse": "Personal",
+  "area": "Production",
+  "func": "Design",
+  "device": "Note",
+  "platforms": [
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Weekly",
+  "features": "Virtual makeup app",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "youtube",
+  "name": "YouTube",
+  "systems": [
+   {
+    "name": "Cardio Exercise System",
+    "id": "cardio-exercise-system"
+   },
+   {
+    "name": "Entertaining Management System",
+    "id": "entertaining-management-system"
+   },
+   {
+    "name": "Muscle Building System",
+    "id": "muscle-building-system"
+   },
+   {
+    "name": "P90X Example",
+    "id": "p90x-example"
+   }
+  ],
+  "mainUse": "Personal",
+  "area": "Education",
+  "func": "Research",
+  "device": "iPad",
+  "platforms": [
+   "Web",
+   "Android",
+   "iOS"
+  ],
+  "integrations": [],
+  "freq": "Daily",
+  "features": "",
+  "fileExt": [
+   ".mp4",
+   ".mov",
+   ".avi",
+   ".wmv"
+  ],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ },
+ {
+  "id": "zoom",
+  "name": "Zoom",
+  "systems": [
+   {
+    "name": "Video Chat System",
+    "id": "video-chat-system"
+   },
+   {
+    "name": "Video Communication System",
+    "id": "video-communication-system"
+   }
+  ],
+  "mainUse": "",
+  "area": "",
+  "func": "",
+  "device": "",
+  "platforms": [],
+  "integrations": [],
+  "freq": "",
+  "features": "",
+  "fileExt": [],
+  "benefits": "",
+  "task": "",
+  "rating": null,
+  "skill": ""
+ }
 ];
 
-// --- Filters ---
-const searchInput = document.getElementById("search");
-const areaSelect = document.getElementById("area-select");
-const functionSelect = document.getElementById("function-select");
-const platformSelect = document.getElementById("platform-select");
-const tbody = document.getElementById("table-body");
-const emptyMsg = document.getElementById("empty-msg");
-const countEl = document.getElementById("count");
+const SYSTEMS_CATALOG_URL = "https://kareembullard.github.io/systems-catalog-explorer-web/";
 
 function distinct(field, isArray) {
   const set = new Set();
   TOOLS.forEach(t => {
-    if (isArray) t[field].forEach(v => set.add(v));
-    else set.add(t[field]);
+    const v = t[field];
+    if (isArray) (v || []).forEach(x => set.add(x));
+    else if (v) set.add(v);
   });
   return [...set].sort();
 }
 
-function populateMultiSelect(select, values) {
-  values.forEach(v => {
-    const opt = document.createElement("option");
-    opt.value = v;
-    opt.textContent = v;
-    select.appendChild(opt);
-  });
+function tagHtml(text, extraClass) {
+  return `<span class="tag ${extraClass || ""}">${text}</span>`;
 }
 
-populateMultiSelect(areaSelect, distinct("area", false));
-populateMultiSelect(functionSelect, distinct("function", false));
-populateMultiSelect(platformSelect, distinct("platforms", true));
+function starHtml(rating) {
+  if (!rating) return "";
+  return `<span class="stars">${"★".repeat(rating)}${"☆".repeat(5 - rating)}</span>`;
+}
 
-function selectedValues(select) {
-  return [...select.selectedOptions].map(o => o.value);
+// --- Router ---
+const app = document.getElementById("app");
+
+function parseRoute() {
+  const hash = location.hash.replace(/^#\/?/, "");
+  const parts = hash.split("/").filter(Boolean);
+  return parts.length ? parts : ["list"];
+}
+
+function render() {
+  const parts = parseRoute();
+  if (parts[0] === "tool" && parts[1]) return renderToolDetail(decodeURIComponent(parts[1]));
+  renderList();
 }
 
 let sortCol = null;
 let sortDir = 1;
 
-function matches(tool, q, areas, functions, platforms) {
-  if (areas.length && !areas.includes(tool.area)) return false;
-  if (functions.length && !functions.includes(tool.function)) return false;
-  if (platforms.length && !platforms.some(p => tool.platforms.includes(p))) return false;
-  if (q && !tool.tool.toLowerCase().includes(q)) return false;
-  return true;
-}
+function renderList() {
+  app.innerHTML = "";
 
-function sortValue(tool, col) {
-  if (col === "platforms") return tool.platforms.join(", ");
-  return tool[col];
-}
+  const layout = document.createElement("div");
+  layout.className = "layout";
 
-function refresh() {
-  const q = searchInput.value.trim().toLowerCase();
-  const areas = selectedValues(areaSelect);
-  const functions = selectedValues(functionSelect);
-  const platforms = selectedValues(platformSelect);
+  const panel = document.createElement("div");
+  panel.className = "filter-panel";
+  panel.innerHTML = `
+    <label for="search">Search</label>
+    <input type="search" id="search" placeholder="Tool name…">
+    <label for="area-select">Area</label>
+    <select id="area-select" multiple size="6"></select>
+    <label for="function-select">Function</label>
+    <select id="function-select" multiple size="6"></select>
+    <label for="platform-select">Platform</label>
+    <select id="platform-select" multiple size="6"></select>
+    <label for="mainuse-select">Main Use</label>
+    <select id="mainuse-select" multiple size="3"></select>
+    <button class="btn" id="clear-filters">Clear filters</button>
+  `;
 
-  let filtered = TOOLS.filter(t => matches(t, q, areas, functions, platforms));
+  const right = document.createElement("div");
+  right.innerHTML = `
+    <div class="count" id="count"></div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-col="name">Tool</th>
+            <th data-col="area">Area</th>
+            <th data-col="func">Function</th>
+            <th data-col="platforms">Platforms</th>
+            <th data-col="rating">Rating</th>
+            <th data-col="systems">Systems</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="empty-msg" style="display:none">No tools match.</div>
+  `;
 
-  if (sortCol) {
-    filtered = [...filtered].sort((a, b) => {
-      const va = sortValue(a, sortCol), vb = sortValue(b, sortCol);
-      if (typeof va === "number" && typeof vb === "number") return (va - vb) * sortDir;
-      return String(va).localeCompare(String(vb)) * sortDir;
+  layout.appendChild(panel);
+  layout.appendChild(right);
+  app.appendChild(layout);
+
+  const searchInput = panel.querySelector("#search");
+  const areaSelect = panel.querySelector("#area-select");
+  const functionSelect = panel.querySelector("#function-select");
+  const platformSelect = panel.querySelector("#platform-select");
+  const mainUseSelect = panel.querySelector("#mainuse-select");
+  const tbody = right.querySelector("#table-body");
+  const emptyMsg = right.querySelector("#empty-msg");
+  const countEl = right.querySelector("#count");
+
+  function populateMultiSelect(select, values) {
+    values.forEach(v => {
+      const opt = document.createElement("option");
+      opt.value = v;
+      opt.textContent = v;
+      select.appendChild(opt);
+    });
+  }
+  populateMultiSelect(areaSelect, distinct("area", false));
+  populateMultiSelect(functionSelect, distinct("func", false));
+  populateMultiSelect(platformSelect, distinct("platforms", true));
+  populateMultiSelect(mainUseSelect, distinct("mainUse", false));
+
+  function selectedValues(select) { return [...select.selectedOptions].map(o => o.value); }
+
+  function matches(t, q, areas, functions, platforms, mainUses) {
+    if (areas.length && !areas.includes(t.area)) return false;
+    if (functions.length && !functions.includes(t.func)) return false;
+    if (platforms.length && !platforms.some(p => t.platforms.includes(p))) return false;
+    if (mainUses.length && !mainUses.includes(t.mainUse)) return false;
+    if (q && !t.name.toLowerCase().includes(q)) return false;
+    return true;
+  }
+
+  function sortValue(t, col) {
+    if (col === "platforms") return t.platforms.join(", ");
+    if (col === "systems") return t.systems.length;
+    return t[col] || "";
+  }
+
+  function draw() {
+    const q = searchInput.value.trim().toLowerCase();
+    const areas = selectedValues(areaSelect);
+    const functions = selectedValues(functionSelect);
+    const platforms = selectedValues(platformSelect);
+    const mainUses = selectedValues(mainUseSelect);
+
+    let filtered = TOOLS.filter(t => matches(t, q, areas, functions, platforms, mainUses));
+
+    if (sortCol) {
+      filtered = [...filtered].sort((a, b) => {
+        const va = sortValue(a, sortCol), vb = sortValue(b, sortCol);
+        if (typeof va === "number" && typeof vb === "number") return (va - vb) * sortDir;
+        return String(va).localeCompare(String(vb)) * sortDir;
+      });
+    }
+
+    tbody.innerHTML = "";
+    emptyMsg.style.display = filtered.length ? "none" : "block";
+    countEl.textContent = `${filtered.length} of ${TOOLS.length} tools`;
+
+    filtered.forEach(t => {
+      const tr = document.createElement("tr");
+      const nameTd = document.createElement("td");
+      const a = document.createElement("a");
+      a.className = "tool-link";
+      a.textContent = t.name;
+      a.addEventListener("click", () => { location.hash = `#/tool/${encodeURIComponent(t.id)}`; });
+      nameTd.appendChild(a);
+      if (t.skill) nameTd.insertAdjacentHTML("beforeend", " " + tagHtml(t.skill, "skill"));
+      tr.appendChild(nameTd);
+
+      const areaTd = document.createElement("td"); areaTd.textContent = t.area || "—"; tr.appendChild(areaTd);
+      const funcTd = document.createElement("td"); funcTd.textContent = t.func || "—"; tr.appendChild(funcTd);
+      const platTd = document.createElement("td"); platTd.textContent = t.platforms.join(", ") || "—"; tr.appendChild(platTd);
+      const ratingTd = document.createElement("td"); ratingTd.innerHTML = starHtml(t.rating) || "—"; tr.appendChild(ratingTd);
+      const sysTd = document.createElement("td"); sysTd.textContent = t.systems.length ? `${t.systems.length}` : "—"; tr.appendChild(sysTd);
+
+      tbody.appendChild(tr);
     });
   }
 
-  tbody.innerHTML = "";
-  emptyMsg.style.display = filtered.length ? "none" : "block";
-  countEl.textContent = `${filtered.length} of ${TOOLS.length} tools`;
-
-  filtered.forEach(t => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td></td><td></td><td></td><td></td><td></td><td></td>`;
-    tr.children[0].textContent = t.tool;
-    tr.children[1].textContent = t.area;
-    tr.children[2].textContent = t.function;
-    tr.children[3].textContent = t.platforms.join(", ");
-    tr.children[4].textContent = "★".repeat(t.rating);
-    tr.children[5].innerHTML = t.stacked ? '<span class="stacked-badge">Yes</span>' : "";
-    tbody.appendChild(tr);
+  right.querySelectorAll("th[data-col]").forEach(th => {
+    th.addEventListener("click", () => {
+      const col = th.dataset.col;
+      if (sortCol === col) sortDir *= -1;
+      else { sortCol = col; sortDir = 1; }
+      draw();
+    });
   });
+
+  searchInput.addEventListener("input", draw);
+  areaSelect.addEventListener("change", draw);
+  functionSelect.addEventListener("change", draw);
+  platformSelect.addEventListener("change", draw);
+  mainUseSelect.addEventListener("change", draw);
+  panel.querySelector("#clear-filters").addEventListener("click", () => {
+    searchInput.value = "";
+    [areaSelect, functionSelect, platformSelect, mainUseSelect].forEach(sel => {
+      [...sel.options].forEach(o => (o.selected = false));
+    });
+    draw();
+  });
+
+  draw();
 }
 
-document.querySelectorAll("th[data-col]").forEach(th => {
-  th.addEventListener("click", () => {
-    const col = th.dataset.col;
-    if (sortCol === col) sortDir *= -1;
-    else { sortCol = col; sortDir = 1; }
-    refresh();
-  });
-});
+function renderToolDetail(id) {
+  const tool = TOOLS.find(t => t.id === id);
+  app.innerHTML = "";
+  if (!tool) {
+    app.innerHTML = `<p class="empty">Tool not found.</p>`;
+    return;
+  }
 
-searchInput.addEventListener("input", refresh);
-areaSelect.addEventListener("change", refresh);
-functionSelect.addEventListener("change", refresh);
-platformSelect.addEventListener("change", refresh);
+  const crumbs = document.createElement("nav");
+  crumbs.className = "crumbs";
+  const back = document.createElement("a");
+  back.textContent = "← All Tools";
+  back.addEventListener("click", () => { location.hash = "#/list"; });
+  crumbs.appendChild(back);
+  app.appendChild(crumbs);
 
-document.getElementById("clear-filters").addEventListener("click", () => {
-  searchInput.value = "";
-  [areaSelect, functionSelect, platformSelect].forEach(sel => {
-    [...sel.options].forEach(o => (o.selected = false));
-  });
-  refresh();
-});
+  const h2 = document.createElement("h2");
+  h2.textContent = tool.name;
+  if (tool.skill) h2.insertAdjacentHTML("beforeend", " " + tagHtml(tool.skill, "skill"));
+  app.appendChild(h2);
 
-refresh();
+  const grid = document.createElement("div");
+  grid.className = "detail-grid";
+  function field(label, value) {
+    if (!value) return;
+    const div = document.createElement("div");
+    div.className = "detail-field";
+    div.innerHTML = `<div class="label">${label}</div><div class="value">${value}</div>`;
+    grid.appendChild(div);
+  }
+  field("Area", tool.area);
+  field("Function", tool.func);
+  field("Main Use", tool.mainUse);
+  field("Device", tool.device);
+  field("Update Frequency", tool.freq);
+  field("Rating", starHtml(tool.rating));
+  field("Platforms", tool.platforms.join(", "));
+  field("File Types", tool.fileExt.join(", "));
+  field("Integrations", tool.integrations.join(", "));
+  app.appendChild(grid);
+
+  function prose(label, text) {
+    if (!text) return;
+    const div = document.createElement("div");
+    div.className = "prose";
+    div.innerHTML = `<div class="label">${label}</div><div>${text}</div>`;
+    app.appendChild(div);
+  }
+  prose("Features", tool.features);
+  prose("Benefits", tool.benefits);
+  prose("Task", tool.task);
+
+  const section = document.createElement("div");
+  section.className = "section";
+  section.innerHTML = `<h2>Linked Systems (${tool.systems.length})</h2>`;
+  if (!tool.systems.length) {
+    section.innerHTML += `<p class="empty">Not currently linked to any system.</p>`;
+  } else {
+    const ul = document.createElement("ul");
+    ul.className = "entities";
+    tool.systems.forEach(s => {
+      const li = document.createElement("li");
+      li.className = "entity";
+      const a = document.createElement("a");
+      a.textContent = s.name;
+      a.href = `${SYSTEMS_CATALOG_URL}#/system/${s.id}`;
+      a.target = "_blank";
+      a.rel = "noopener";
+      li.appendChild(a);
+      li.insertAdjacentHTML("beforeend", ' <span class="tag">opens systems-catalog-explorer-web ↗</span>');
+      ul.appendChild(li);
+    });
+    section.appendChild(ul);
+  }
+  app.appendChild(section);
+}
+
+window.addEventListener("hashchange", render);
+render();
 </script>
 </body>
 </html>
